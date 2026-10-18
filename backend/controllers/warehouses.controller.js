@@ -1,12 +1,25 @@
 const prisma = require('../lib/prisma');
 const { handleError } = require('../lib/errors');
 
+// A staff member may only use their own warehouse
+function staffBlocked(req) {
+  return req.user.role === 'staff' && req.params.id.toLowerCase() !== req.user.warehouse_id;
+}
+
 exports.list = async (req, res) => {
   try {
-    const rows = await prisma.warehouses.findMany({
-      where: { is_active: true },
-      orderBy: { name: 'asc' },
-    });
+    const where = { is_active: true };
+    if (req.user.role === 'staff') {
+      if (!req.user.warehouse_id) {
+        return res.status(403).json({ error: 'This staff account has no warehouse' });
+      }
+      where.warehouse_id = req.user.warehouse_id;
+    }
+    let rows = await prisma.warehouses.findMany({ where, orderBy: { name: 'asc' } });
+    // Clients only need the name and city to choose a warehouse
+    if (req.user.role === 'client') {
+      rows = rows.map(({ warehouse_id, name, city }) => ({ warehouse_id, name, city }));
+    }
     res.json(rows);
   } catch (err) {
     handleError(res, err);
@@ -15,6 +28,7 @@ exports.list = async (req, res) => {
 
 exports.getOne = async (req, res) => {
   try {
+    if (staffBlocked(req)) return res.status(403).json({ error: 'Not your warehouse' });
     const row = await prisma.warehouses.findUnique({ where: { warehouse_id: req.params.id } });
     if (!row) return res.status(404).json({ error: 'Not found' });
     res.json(row);
@@ -65,6 +79,7 @@ exports.deactivate = async (req, res) => {
 // Stock in one warehouse
 exports.inventory = async (req, res) => {
   try {
+    if (staffBlocked(req)) return res.status(403).json({ error: 'Not your warehouse' });
     const rows = await prisma.inventory.findMany({
       where: { warehouse_id: req.params.id },
     });
