@@ -1,0 +1,193 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model audit_logs {
+  log_id     String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  table_name String       @db.VarChar(100)
+  record_id  String?      @db.Uuid
+  action     audit_action
+  old_value  Json?
+  new_value  Json?
+  changed_by String?      @db.Uuid
+  changed_at DateTime     @default(now()) @db.Timestamp(6)
+  users      users?       @relation(fields: [changed_by], references: [user_id], map: "fk_audit_user")
+
+  @@index([changed_at], map: "idx_audit_changed_at")
+  @@index([table_name, record_id], map: "idx_audit_table_record")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model inventory {
+  inventory_id      String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  warehouse_id      String            @db.Uuid
+  item_id           String            @db.Uuid
+  quantity          Int               @default(0)
+  reorder_threshold Int               @default(10)
+  updated_at        DateTime          @default(now()) @db.Timestamp(6)
+  items             items             @relation(fields: [item_id], references: [item_id], map: "fk_inventory_item")
+  warehouses        warehouses        @relation(fields: [warehouse_id], references: [warehouse_id], map: "fk_inventory_warehouse")
+  stock_movements   stock_movements[]
+
+  @@unique([warehouse_id, item_id], map: "uq_inventory_wh_item")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model items {
+  item_id     String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sku         String        @unique @db.VarChar(100)
+  name        String        @db.VarChar(200)
+  description String?
+  unit_price  Decimal       @db.Decimal(12, 2)
+  is_active   Boolean       @default(true)
+  inventory   inventory[]
+  order_items order_items[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model order_items {
+  order_item_id String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_id      String  @db.Uuid
+  item_id       String  @db.Uuid
+  quantity      Int
+  unit_price    Decimal @db.Decimal(12, 2)
+  items         items   @relation(fields: [item_id], references: [item_id], map: "fk_order_items_item")
+  orders        orders  @relation(fields: [order_id], references: [order_id], onDelete: Cascade, map: "fk_order_items_order")
+
+  @@index([order_id], map: "idx_order_items_order")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model orders {
+  order_id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  client_id        String        @db.Uuid
+  warehouse_id     String        @db.Uuid
+  status           order_status  @default(pending)
+  delivery_address String
+  created_at       DateTime      @default(now()) @db.Timestamp(6)
+  order_items      order_items[]
+  users            users         @relation(fields: [client_id], references: [user_id], map: "fk_orders_client")
+  warehouses       warehouses    @relation(fields: [warehouse_id], references: [warehouse_id], map: "fk_orders_warehouse")
+  shipments        shipments[]
+
+  @@index([client_id], map: "idx_orders_client")
+  @@index([warehouse_id, status], map: "idx_orders_warehouse")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model shipments {
+  shipment_id   String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_id      String          @db.Uuid
+  driver_id     String          @db.Uuid
+  vehicle_id    String          @db.Uuid
+  status        shipment_status @default(assigned)
+  dispatched_at DateTime?       @db.Timestamp(6)
+  delivered_at  DateTime?       @db.Timestamp(6)
+  users         users           @relation(fields: [driver_id], references: [user_id], map: "fk_shipments_driver")
+  orders        orders          @relation(fields: [order_id], references: [order_id], map: "fk_shipments_order")
+  vehicles      vehicles        @relation(fields: [vehicle_id], references: [vehicle_id], map: "fk_shipments_vehicle")
+
+  @@index([driver_id, status], map: "idx_shipments_driver")
+  @@index([order_id], map: "idx_shipments_order")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model stock_movements {
+  movement_id     String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inventory_id    String        @db.Uuid
+  movement_type   movement_type
+  quantity_change Int
+  performed_by    String        @db.Uuid
+  created_at      DateTime      @default(now()) @db.Timestamp(6)
+  inventory       inventory     @relation(fields: [inventory_id], references: [inventory_id], map: "fk_movements_inventory")
+  users           users         @relation(fields: [performed_by], references: [user_id], map: "fk_movements_user")
+
+  @@index([inventory_id, created_at], map: "idx_movements_inventory")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model users {
+  user_id         String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  firstname       String            @db.VarChar(200)
+  lastname        String            @db.VarChar(200)
+  email           String            @unique @db.VarChar(255)
+  password_hash   String
+  role            user_role
+  warehouse_id    String?           @db.Uuid
+  is_active       Boolean           @default(true)
+  created_at      DateTime          @default(now()) @db.Timestamp(6)
+  audit_logs      audit_logs[]
+  orders          orders[]
+  shipments       shipments[]
+  stock_movements stock_movements[]
+  warehouses      warehouses?       @relation(fields: [warehouse_id], references: [warehouse_id], map: "fk_users_warehouse")
+
+  @@index([warehouse_id], map: "idx_users_warehouse")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model vehicles {
+  vehicle_id String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  plate      String      @unique @db.VarChar(30)
+  type       String      @db.VarChar(80)
+  is_active  Boolean     @default(true)
+  shipments  shipments[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model warehouses {
+  warehouse_id String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String      @db.VarChar(200)
+  address      String
+  city         String      @db.VarChar(120)
+  is_active    Boolean     @default(true)
+  inventory    inventory[]
+  orders       orders[]
+  users        users[]
+}
+
+enum audit_action {
+  INSERT
+  UPDATE
+  DELETE
+}
+
+enum movement_type {
+  restock
+  order_out
+  transfer_in
+  transfer_out
+  adjustment
+}
+
+enum order_status {
+  pending
+  confirmed
+  dispatched
+  delivered
+  cancelled
+}
+
+enum shipment_status {
+  assigned
+  in_transit
+  delivered
+  failed
+}
+
+enum user_role {
+  admin
+  staff
+  driver
+  client
+}
