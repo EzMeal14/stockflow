@@ -1,31 +1,37 @@
 const prisma = require('../lib/prisma');
 const { handleError } = require('../lib/errors');
 
-// READ all active items
+// Warehouse staff must not see prices
+function forRole(user, item) {
+  if (user.role === 'staff') {
+    const { unit_price, ...rest } = item;
+    return rest;
+  }
+  return item;
+}
+
 exports.list = async (req, res) => {
   try {
     const items = await prisma.items.findMany({
       where: { is_active: true },
       orderBy: { name: 'asc' },
     });
-    res.json(items);
+    res.json(items.map((i) => forRole(req.user, i)));
   } catch (err) {
     handleError(res, err);
   }
 };
 
-// READ one item
 exports.getOne = async (req, res) => {
   try {
     const item = await prisma.items.findUnique({ where: { item_id: req.params.id } });
     if (!item) return res.status(404).json({ error: 'Not found' });
-    res.json(item);
+    res.json(forRole(req.user, item));
   } catch (err) {
     handleError(res, err);
   }
 };
 
-// CREATE an item
 exports.create = async (req, res) => {
   try {
     const { sku, name, description, unit_price } = req.body;
@@ -41,7 +47,6 @@ exports.create = async (req, res) => {
   }
 };
 
-// UPDATE an item
 exports.update = async (req, res) => {
   try {
     const { sku, name, description, unit_price } = req.body;
