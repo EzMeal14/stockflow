@@ -7,5 +7,7 @@ app.use('/auth', require('./routes/auth.routes'));
 app.use('/items', require('./routes/items.routes'));
 app.use('/warehouses', require('./routes/warehouses.routes'));
 app.use('/orders', require('./routes/orders.routes'));
+app.use('/vehicles', require('./routes/vehicles.routes'));
+app.use('/shipments', require('./routes/shipments.routes'));
 
 module.exports = app;
