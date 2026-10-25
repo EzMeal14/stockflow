@@ -1,30 +1,45 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockFlow - Inventory Management</title>
-    <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StockFlow - Sign in</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
-    <header>
-        <h1>StockFlow</h1>
-        <p>Multi-Branch Warehouse & Shipment Tracker</p>
-    </header>
+<body class="center">
+  <main class="card narrow">
+    <h1>StockFlow</h1>
+    <p class="muted">Multi-Branch Warehouse &amp; Shipment Tracker</p>
 
-    <main>
-        <h2>Inventory Dashboard</h2>
-        <p>Welcome to StockFlow.</p>
+    <form id="login-form">
+      <label>Email
+        <input type="email" id="email" required autocomplete="username">
+      </label>
+      <label>Password
+        <input type="password" id="password" required autocomplete="current-password">
+      </label>
+      <button type="submit">Sign in</button>
+      <p id="login-message"></p>
+    </form>
 
-        <section>
-            <h3>Inventory Items</h3>
-            <button id="loadInventory">Load Inventory</button>
-            <p id="message">Click the button to load inventory.</p>
-            <ul id="inventoryList"></ul>
-        </section>
-    </main>
+    <hr>
+    <details>
+      <summary>New client? Create an account</summary>
+      <form id="register-form">
+        <label>First name <input id="reg-first" required></label>
+        <label>Last name <input id="reg-last" required></label>
+        <label>Email <input type="email" id="reg-email" required></label>
+        <label>Password (8 or more characters)
+          <input type="password" id="reg-password" minlength="8" required autocomplete="new-password">
+        </label>
+        <button type="submit">Create account</button>
+        <p id="register-message"></p>
+      </form>
+    </details>
+  </main>
 
-    <script src="js/app.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/login.js"></script>
 </body>
 </html>
