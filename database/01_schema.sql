@@ -53,7 +53,7 @@ CREATE TABLE inventory (
     warehouse_id      uuid      NOT NULL,
     item_id           uuid      NOT NULL,
     quantity          integer   NOT NULL DEFAULT 0,
-    reorder_threshold integer   NOT NULL DEFAULT 10 CHECK (reorder_threshold >= 0),
+    reorder_threshold integer   NOT NULL DEFAULT 100 CHECK (reorder_threshold >= 0),
     updated_at        timestamp NOT NULL DEFAULT now(),
     CONSTRAINT chk_inventory_quantity CHECK (quantity >= 0),       -- no negative stock
     CONSTRAINT uq_inventory_wh_item   UNIQUE (warehouse_id, item_id),

@@ -29,3 +29,21 @@ exports.warehouses = async (req, res) => {
     handleError(res, err);
   }
 };
+
+// How many units of each item are in ONE warehouse. Used by the client order form.
+// Only the item and the number are sent. No reorder level, no history, no other warehouse.
+exports.availability = async (req, res) => {
+  try {
+    const warehouse_id = req.query.warehouse_id;
+    if (!warehouse_id) {
+      return res.status(400).json({ error: 'warehouse_id is required' });
+    }
+    const rows = await prisma.inventory.findMany({
+      where: { warehouse_id: String(warehouse_id) },
+      select: { item_id: true, quantity: true },
+    });
+    res.json(rows.map((r) => ({ item_id: r.item_id, available: r.quantity })));
+  } catch (err) {
+    handleError(res, err);
+  }
+};

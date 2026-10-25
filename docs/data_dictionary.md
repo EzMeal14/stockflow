@@ -91,7 +91,7 @@ How many units of one item are in one warehouse.
 | warehouse_id | uuid | FK | NN | | Which warehouse |
 | item_id | uuid | FK | NN | | Which item |
 | quantity | integer | | NN | 0 | Units in stock. **Cannot go below 0** |
-| reorder_threshold | integer | | NN | 10 | Low-stock level. Must be 0 or more |
+| reorder_threshold | integer | | NN | 100 | Low-stock level. Must be 0 or more |
 | updated_at | timestamp | | NN | now() | Last change (set by trigger) |
 
 **Rule:** `UNIQUE (warehouse_id, item_id)` means one row per item per warehouse.
