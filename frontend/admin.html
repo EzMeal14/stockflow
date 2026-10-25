@@ -16,7 +16,7 @@
     <nav class="tabs">
       <button type="button" data-tab="items" class="active">Items</button>
       <button type="button" data-tab="warehouses">Warehouses</button>
-      <button type="button" data-tab="vehicles">Vehicles</button>
+      <button type="button" data-tab="vehicles">Vehicles &amp; Drivers</button>
       <button type="button" data-tab="orders">Orders</button>
       <button type="button" data-tab="shipments">Shipments</button>
       <button type="button" data-tab="stock">Stock</button>
@@ -41,6 +41,11 @@
       <section class="card">
         <h2>Vehicles</h2>
         <div id="vehicles-root"></div>
+      </section>
+
+      <section class="card">
+        <h2>Drivers</h2>
+        <div id="drivers-root"></div>
       </section>
     </div>
 
@@ -74,7 +79,7 @@
             <h2>Stock</h2>
             <label>Warehouse <select id="stock-warehouse"></select></label>
             <table id="stock-table"></table>
-            <p class="muted">Orange rows are below the reorder level.</p>
+            <p class="muted"><strong>Reorder level</strong> is the stock limit for an item (100 by default). When the quantity falls below it, the row turns orange and the item appears in <em>Low stock</em>. That is the signal to order more from the supplier.</p>
           </section>
 
     

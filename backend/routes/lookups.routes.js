@@ -6,5 +6,6 @@ router.use(authenticate);
 
 router.get('/drivers', requireRole('admin', 'staff'), lookups.drivers);
 router.get('/warehouses', requireRole('admin', 'staff'), lookups.warehouses);
+router.get('/availability', requireRole('admin', 'client'), lookups.availability);
 
 module.exports = router;
