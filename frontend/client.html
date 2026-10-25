@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>StockFlow - Client</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="bar">
+    <strong>StockFlow | Client</strong>
+    <span><span id="who"></span> <button class="secondary" id="logout">Log out</button></span>
+  </header>
+
+  <main class="page">
+    <section class="card">
+      <h2>Place an order</h2>
+      <form id="order-form">
+        <div class="row">
+          <label>Warehouse <select id="warehouse" required></select></label>
+          <label>Delivery address <input id="address" required></label>
+        </div>
+        <table>
+          <thead><tr><th>SKU</th><th>Item</th><th>Price</th><th>Quantity</th></tr></thead>
+          <tbody id="catalog"></tbody>
+        </table>
+        <p><button type="submit">Place order</button></p>
+        <p id="order-message"></p>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>My orders</h2>
+      <table id="orders-table"></table>
+      <div id="order-detail"></div>
+    </section>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/client.js"></script>
+</body>
+</html>
