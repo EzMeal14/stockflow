@@ -123,7 +123,7 @@ function setMessage(id, text, ok) {
 // actionsFn(row) returns a list of buttons. rowClassFn(row) returns a CSS class.
 function fillTable(table, columns, rows, actionsFn, rowClassFn) {
   table.replaceChildren();
-  const head = el('tr', null, columns.map((c) => el('th', { text: c.label })));
+  const head = el('tr', null, columns.map((c) => el('th', { text: c.label, class: ['quantity', 'reorder_threshold', 'unit_price', 'quantity_change'].includes(c.key) ? 'num' : '' })));
   if (actionsFn) head.append(el('th', { text: '' }));
   table.append(el('thead', null, head));
 
@@ -136,7 +136,15 @@ function fillTable(table, columns, rows, actionsFn, rowClassFn) {
     const tr = el('tr', { class: (rowClassFn && rowClassFn(r)) || '' });
     columns.forEach((c) => {
       const v = c.format ? c.format(r[c.key], r) : r[c.key];
-      tr.append(el('td', { text: v === null || v === undefined ? '' : String(v) }));
+      const text = v === null || v === undefined ? '' : String(v);
+      const cls = ['quantity', 'reorder_threshold', 'unit_price', 'quantity_change'].includes(c.key) ? 'num' : (c.key === 'sku' ? 'sku' : '');
+      const td = el('td', { class: cls });
+      if ((c.key === 'status' || c.key === 'movement_type') && text) {
+        td.append(el('span', { class: 'pill pill-' + text.toLowerCase().replace(/[^a-z]+/g, '-'), text: text.replace(/_/g, ' ') }));
+      } else {
+        td.textContent = text;
+      }
+      tr.append(td);
     });
     if (actionsFn) {
       const td = el('td', { class: 'actions' });
