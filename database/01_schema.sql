@@ -30,8 +30,11 @@ CREATE TABLE users (
     password_hash text         NOT NULL,
     role          user_role    NOT NULL,
     warehouse_id  uuid,                              -- only used by warehouse staff
+    contact_number varchar(20),                      -- phone number of drivers and staff
     is_active     boolean      NOT NULL DEFAULT true,
     created_at    timestamp    NOT NULL DEFAULT now(),
+    CONSTRAINT chk_users_contact_number
+        CHECK (contact_number IS NULL OR contact_number ~ '^\+?[0-9]{7,15}$'),
     CONSTRAINT fk_users_warehouse
         FOREIGN KEY (warehouse_id) REFERENCES warehouses (warehouse_id)
         ON DELETE SET NULL ON UPDATE CASCADE

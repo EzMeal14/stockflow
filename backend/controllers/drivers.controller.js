@@ -2,9 +2,10 @@ const bcrypt = require('bcryptjs');
 const prisma = require('../lib/prisma');
 const { handleError } = require('../lib/errors');
 const { withUser } = require('../lib/audit');
+const { cleanContactNumber, CONTACT_ERROR } = require('../lib/phone');
 
 const OPEN_STATUSES = ['assigned', 'in_transit'];
-const PUBLIC_FIELDS = { user_id: true, firstname: true, lastname: true, email: true };
+const PUBLIC_FIELDS = { user_id: true, firstname: true, lastname: true, email: true, contact_number: true };
 
 // Active drivers
 exports.list = async (req, res) => {
@@ -32,10 +33,14 @@ exports.create = async (req, res) => {
         error: 'firstname, lastname, email and a password of 8 or more characters are required',
       });
     }
+    const contact_number = cleanContactNumber(req.body.contact_number);
+    if (!contact_number) {
+      return res.status(400).json({ error: CONTACT_ERROR });
+    }
     const password_hash = await bcrypt.hash(password, 10);
     const driver = await withUser(req.user.user_id, (tx) =>
       tx.users.create({
-        data: { firstname, lastname, email, password_hash, role: 'driver' },
+        data: { firstname, lastname, email, password_hash, contact_number, role: 'driver' },
         select: PUBLIC_FIELDS,
       })
     );

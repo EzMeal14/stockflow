@@ -65,6 +65,7 @@ Every person in the system. The `role` decides which dashboard and data they get
 | password_hash | text | | NN | | Hashed password, never plain text |
 | role | user_role | | NN | | admin, staff, driver, or client |
 | warehouse_id | uuid | FK | Yes | | Assigned warehouse (used by staff only) |
+| contact_number | varchar(20) | | Yes | | Phone number of drivers and staff. Digits only, with an optional + at the start (7 to 15 digits) |
 | is_active | boolean | | NN | true | false = account disabled |
 | created_at | timestamp | | NN | now() | When the account was made |
 

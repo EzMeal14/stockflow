@@ -1,8 +1,13 @@
 const user = requireRole('admin');
 
 let ops = null;
-// After items, warehouses, vehicles or drivers change, refresh the lists used by the other tabs
-const refreshOps = () => { if (ops) ops.reload(); };
+let staffCrud = null;
+// After items, warehouses, vehicles, drivers or staff change, refresh the lists used by the other tabs.
+// The staff form also has a warehouse list, so it reloads when a warehouse is added or removed.
+const refreshOps = () => {
+  if (ops) ops.reload();
+  if (staffCrud) staffCrud.reload();
+};
 
 if (user) {
   setupTabs();
@@ -64,14 +69,44 @@ if (user) {
       { key: 'firstname', label: 'First name', required: true },
       { key: 'lastname', label: 'Last name', required: true },
       { key: 'email', label: 'Email', type: 'email', required: true, autocomplete: 'off' },
+      { key: 'contact_number', label: 'Contact number', type: 'tel', required: true, placeholder: '09171234567', pattern: '\\+?[0-9 ]{7,20}', title: 'Digits only, for example 09171234567', autocomplete: 'off' },
       { key: 'password', label: 'Password (8 or more characters)', type: 'password', required: true, minlength: 8, autocomplete: 'new-password' },
     ],
     columns: [
       { key: 'firstname', label: 'First name' },
       { key: 'lastname', label: 'Last name' },
       { key: 'email', label: 'Email' },
+      { key: 'contact_number', label: 'Contact number' },
     ],
     describe: (saved) => 'Driver added: ' + saved.email,
+  });
+
+  // Staff accounts: add a staff member (with a warehouse), or remove one (the account is switched off, not deleted)
+  staffCrud = setupCrud({
+    root: 'staff-root', path: '/staff', idKey: 'user_id',
+    canEdit: false,
+    removeLabel: 'Remove',
+    confirmText: 'Remove this staff member? The account is switched off. Past records stay in the history.',
+    removedMessage: 'Staff member removed.',
+    hint: 'A new staff member signs in with this email and password. They only see the orders, shipments and stock of the warehouse you choose.',
+    fields: [
+      { key: 'firstname', label: 'First name', required: true },
+      { key: 'lastname', label: 'Last name', required: true },
+      { key: 'email', label: 'Email', type: 'email', required: true, autocomplete: 'off' },
+      { key: 'contact_number', label: 'Contact number', type: 'tel', required: true, placeholder: '09171234567', pattern: '\\+?[0-9 ]{7,20}', title: 'Digits only, for example 09171234567', autocomplete: 'off' },
+      { key: 'password', label: 'Password (8 or more characters)', type: 'password', required: true, minlength: 8, autocomplete: 'new-password' },
+      { key: 'warehouse_id', label: 'Warehouse', type: 'select', required: true,
+        optionsPath: '/lookups/warehouses', optionValue: 'warehouse_id',
+        optionLabel: (w) => w.name + ' (' + w.city + ')' },
+    ],
+    columns: [
+      { key: 'firstname', label: 'First name' },
+      { key: 'lastname', label: 'Last name' },
+      { key: 'email', label: 'Email' },
+      { key: 'contact_number', label: 'Contact number' },
+      { key: 'warehouse_name', label: 'Warehouse' },
+    ],
+    describe: (saved) => 'Staff member added: ' + saved.email,
   });
 
   // Orders, shipments and stock use the same code as the staff page
@@ -89,10 +124,13 @@ function setupTabs() {
 // One form and one table to add, edit and remove records.
 // The API never deletes rows. "Deactivate" and "Remove" only turn a record off.
 // Options: hint, describe(saved), canEdit (default true), removeLabel, confirmText, removedMessage.
+// A field with type 'select' needs optionsPath (an API list), optionValue (the id key) and optionLabel(row).
+// Returns { reload } so the page can refresh the form's lists.
 function setupCrud(cfg) {
   const root = document.getElementById(cfg.root);
   const canEdit = cfg.canEdit !== false;
   const inputs = {};
+  const selects = [];
   let editingId = null;
 
   const msg = el('p');
@@ -102,12 +140,20 @@ function setupCrud(cfg) {
   const cancel = el('button', { type: 'button', class: 'secondary', hidden: true, text: 'Cancel', onclick: reset });
   const form = el('form', { class: 'row' });
   cfg.fields.forEach((f) => {
-    const attrs = { type: f.type || 'text' };
-    if (f.type === 'number') { attrs.min = '0'; attrs.step = f.step || '1'; }
-    if (f.placeholder) attrs.placeholder = f.placeholder;
-    if (f.minlength) attrs.minlength = String(f.minlength);
-    if (f.autocomplete) attrs.autocomplete = f.autocomplete;
-    const input = el('input', attrs);
+    let input;
+    if (f.type === 'select') {
+      input = el('select');
+      selects.push({ field: f, input });
+    } else {
+      const attrs = { type: f.type || 'text' };
+      if (f.type === 'number') { attrs.min = '0'; attrs.step = f.step || '1'; }
+      if (f.placeholder) attrs.placeholder = f.placeholder;
+      if (f.minlength) attrs.minlength = String(f.minlength);
+      if (f.autocomplete) attrs.autocomplete = f.autocomplete;
+      if (f.pattern) attrs.pattern = f.pattern;
+      if (f.title) attrs.title = f.title;
+      input = el('input', attrs);
+    }
     if (f.required) input.required = true;
     inputs[f.key] = input;
     form.append(el('label', null, f.label, input));
@@ -134,6 +180,14 @@ function setupCrud(cfg) {
     submit.textContent = 'Save changes';
     cancel.hidden = false;
     say('', true);
+  }
+
+  // Fill the drop-down lists of the form, for example the warehouses
+  async function loadSelects() {
+    for (const { field, input } of selects) {
+      const rows = await api(field.optionsPath);
+      fillSelect(input, rows, (r) => r[field.optionValue], field.optionLabel);
+    }
   }
 
   async function load() {
@@ -181,4 +235,6 @@ function setupCrud(cfg) {
   });
 
   load().catch((err) => say(err.message, false));
+  loadSelects().catch((err) => say(err.message, false));
+  return { reload: () => loadSelects().catch((err) => say(err.message, false)) };
 }
