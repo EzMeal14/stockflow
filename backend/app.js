@@ -26,6 +26,7 @@ app.use('/shipments', require('./routes/shipments.routes'));
 app.use('/stock', require('./routes/stock.routes'));
 app.use('/lookups', require('./routes/lookups.routes'));
 app.use('/drivers', require('./routes/drivers.routes'));
+app.use('/staff', require('./routes/staff.routes'));
 
 // Unknown URL
 app.use((req, res) => {
