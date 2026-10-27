@@ -1,6 +1,6 @@
 const prisma = require('../lib/prisma');
 const { handleError } = require('../lib/errors');
-const { parseItemId, nextItemId, renumberActiveItemIds } = require('../lib/item-id');
+const { parseItemId, nextItemId } = require('../lib/item-id');
 
 // Warehouse staff must not see prices
 function forRole(user, item) {
@@ -98,19 +98,25 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { name, description, unit_price } = req.body;
-    let id;
     const typed = req.body.id;
     if (typed !== undefined && typed !== null && String(typed).trim() !== '') {
       const parsed = parseItemId(typed);
       if (parsed.error) return res.status(400).json({ error: parsed.error });
-      id = parsed.id;
+      const current = await prisma.items.findUnique({
+        where: { item_id: req.params.id },
+        select: { id: true },
+      });
+      if (!current) return res.status(404).json({ error: 'Not found' });
+      if (parsed.id !== current.id) {
+        return res.status(400).json({ error: 'Item IDs cannot be changed after an item is created' });
+      }
     }
     if (unit_price !== undefined && !validPrice(unit_price)) {
       return res.status(400).json({ error: 'unit_price must be 0 or more' });
     }
     const item = await prisma.items.update({
       where: { item_id: req.params.id },
-      data: { id, name, description, unit_price },
+      data: { name, description, unit_price },
     });
     res.json(item);
   } catch (err) {
@@ -121,13 +127,9 @@ exports.update = async (req, res) => {
 // "DELETE" = soft delete. The app role is not allowed to delete rows.
 exports.deactivate = async (req, res) => {
   try {
-    const item = await prisma.$transaction(async (tx) => {
-      await tx.items.update({
-        where: { item_id: req.params.id },
-        data: { is_active: false },
-      });
-      await renumberActiveItemIds(tx);
-      return tx.items.findUnique({ where: { item_id: req.params.id } });
+    const item = await prisma.items.update({
+      where: { item_id: req.params.id },
+      data: { is_active: false },
     });
     res.json(item);
   } catch (err) {
@@ -138,14 +140,15 @@ exports.deactivate = async (req, res) => {
 exports.restore = async (req, res) => {
   try {
     const item = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`LOCK TABLE public.items IN ACCESS EXCLUSIVE MODE`;
       const current = await tx.items.findUnique({ where: { item_id: req.params.id } });
       if (!current) return null;
       if (!current.is_active) {
+        const id = current.id.startsWith('ARCHIVED-') ? await nextItemId(tx) : current.id;
         await tx.items.update({
           where: { item_id: req.params.id },
-          data: { is_active: true },
+          data: { id, is_active: true },
         });
-        await renumberActiveItemIds(tx);
       }
       return tx.items.findUnique({ where: { item_id: req.params.id } });
     });

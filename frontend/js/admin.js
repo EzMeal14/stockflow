@@ -16,11 +16,11 @@ if (user) {
   itemCrud = setupCrud({
     root: 'items-root', path: '/items', idKey: 'item_id',
     hint: 'ID: leave it empty to get the next number automatically, or type a number (2 becomes ID-002). '
-      + 'When you edit an item, an empty ID keeps the current one. Deactivating an item compacts IDs for active items.',
-    confirmText: 'Deactivate this item? IDs for active items will be compacted. Stock and order history links remain unchanged.',
-    removedMessage: 'Item deactivated. Active item IDs were compacted.',
+      + 'An item keeps its ID when its name changes, or when it is deactivated and restored.',
+    confirmText: 'Deactivate this item? Its ID and stock/order history will be kept.',
+    removedMessage: 'Item deactivated. Its ID was kept.',
     fields: [
-      { key: 'id', label: 'ID', placeholder: 'Empty = next number' },
+      { key: 'id', label: 'ID', placeholder: 'Empty = next number', immutableOnEdit: true },
       { key: 'name', label: 'Name', required: true },
       { key: 'description', label: 'Description' },
       { key: 'unit_price', label: 'Price', type: 'number', step: '0.01', required: true },
@@ -132,9 +132,9 @@ async function setupInactiveItems() {
   root.replaceChildren(table);
 
   async function load() {
-    const rows = await api('/items/inactive');
+    const rows = sortById(await api('/items/inactive'), 'id');
     fillTable(table, [
-      { key: 'id', label: 'Archived ID' },
+      { key: 'id', label: 'ID' },
       { key: 'name', label: 'Name' },
       { key: 'description', label: 'Description' },
       { key: 'unit_price', label: 'Price', format: money },
@@ -145,12 +145,16 @@ async function setupInactiveItems() {
   }
 
   async function restore(item) {
-    if (!confirm('Restore "' + item.name + '"? It will become active and receive the next available ID.')) return;
+    const legacyArchived = item.id.startsWith('ARCHIVED-');
+    const question = legacyArchived
+      ? 'This item was deactivated before IDs were made stable, so its original numeric ID is unavailable. Restore it with the next available ID?'
+      : 'Restore "' + item.name + '"? Its ID will be kept.';
+    if (!confirm(question)) return;
     try {
-      await api('/items/' + item.item_id + '/restore', { method: 'POST' });
+      const restored = await api('/items/' + item.item_id + '/restore', { method: 'POST' });
       await Promise.all([load(), itemCrud.reloadTable()]);
       refreshOps();
-      message.textContent = 'Item restored. Active IDs have been compacted.';
+      message.textContent = 'Item restored with ID ' + restored.id + '.';
       message.className = 'ok';
     } catch (err) {
       message.textContent = err.message;
@@ -224,6 +228,9 @@ function setupCrud(cfg) {
   function reset() {
     editingId = null;
     form.reset();
+    cfg.fields.forEach((f) => {
+      if (f.immutableOnEdit) inputs[f.key].disabled = false;
+    });
     submit.textContent = 'Add';
     cancel.hidden = true;
   }
@@ -232,6 +239,7 @@ function setupCrud(cfg) {
     editingId = row[cfg.idKey];
     cfg.fields.forEach((f) => {
       inputs[f.key].value = row[f.key] === null || row[f.key] === undefined ? '' : row[f.key];
+      if (f.immutableOnEdit) inputs[f.key].disabled = true;
     });
     submit.textContent = 'Save changes';
     cancel.hidden = false;

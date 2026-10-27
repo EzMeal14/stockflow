@@ -32,42 +32,4 @@ async function nextItemId(db) {
   return pad(Number(rows[0].max) + 1);
 }
 
-async function renumberActiveItemIds(db) {
-  await db.$executeRaw`LOCK TABLE public.items IN ACCESS EXCLUSIVE MODE`;
-  await db.$executeRaw`
-    WITH ranked AS (
-      SELECT item_id,
-             is_active,
-             row_number() OVER (
-               PARTITION BY is_active
-               ORDER BY
-                 CASE WHEN id ~ '^ID-[0-9]+$' THEN 0 ELSE 1 END,
-                 CASE WHEN id ~ '^ID-[0-9]+$'
-                   THEN substring(id FROM '^ID-([0-9]+)$')::numeric
-                 END NULLS LAST,
-                 upper(id),
-                 item_id
-             ) AS number
-      FROM public.items
-    )
-    UPDATE public.items AS item
-    SET id = '__STOCKFLOW_REINDEX__' ||
-      CASE WHEN ranked.is_active THEN 'ACTIVE-' ELSE 'ARCHIVED-' END ||
-      ranked.number::text || '-' || ranked.item_id::text
-    FROM ranked
-    WHERE item.item_id = ranked.item_id`;
-  await db.$executeRaw`
-    UPDATE public.items
-    SET id = CASE
-      WHEN id ~ '^__STOCKFLOW_REINDEX__ACTIVE-' THEN
-        'ID-' || CASE
-          WHEN length(substring(id FROM '^__STOCKFLOW_REINDEX__ACTIVE-([0-9]+)-')) < 3 THEN
-            lpad(substring(id FROM '^__STOCKFLOW_REINDEX__ACTIVE-([0-9]+)-'), 3, '0')
-          ELSE substring(id FROM '^__STOCKFLOW_REINDEX__ACTIVE-([0-9]+)-')
-        END
-      ELSE 'ARCHIVED-' || item_id::text
-    END
-    WHERE id ~ '^__STOCKFLOW_REINDEX__'`;
-}
-
-module.exports = { parseItemId, nextItemId, renumberActiveItemIds };
+module.exports = { parseItemId, nextItemId };
