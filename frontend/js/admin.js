@@ -140,6 +140,7 @@ async function setupInactiveItems() {
       { key: 'unit_price', label: 'Price', format: money },
     ], rows, (row) => [
       btn('Restore', () => restore(row), 'secondary'),
+      btn('Delete', () => deleteInactive(row), 'secondary'),
     ]);
   }
 
@@ -150,6 +151,19 @@ async function setupInactiveItems() {
       await Promise.all([load(), itemCrud.reloadTable()]);
       refreshOps();
       message.textContent = 'Item restored. Active IDs have been compacted.';
+      message.className = 'ok';
+    } catch (err) {
+      message.textContent = err.message;
+      message.className = 'error';
+    }
+  }
+
+  async function deleteInactive(item) {
+    if (!confirm('Permanently delete "' + item.name + '"? This cannot be undone. Items with stock or order history cannot be deleted.')) return;
+    try {
+      await api('/items/' + item.item_id + '/permanent', { method: 'DELETE' });
+      await load();
+      message.textContent = 'Item permanently deleted.';
       message.className = 'ok';
     } catch (err) {
       message.textContent = err.message;

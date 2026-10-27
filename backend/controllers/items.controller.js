@@ -137,3 +137,39 @@ exports.restore = async (req, res) => {
     handleError(res, err);
   }
 };
+
+exports.deleteInactive = async (req, res) => {
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const item = await tx.items.findUnique({ where: { item_id: req.params.id } });
+      if (!item) return { status: 404, error: 'Not found' };
+      if (item.is_active) {
+        return { status: 409, error: 'Only deactivated items can be permanently deleted' };
+      }
+
+      const [inventoryCount, orderItemCount] = await Promise.all([
+        tx.inventory.count({ where: { item_id: req.params.id } }),
+        tx.order_items.count({ where: { item_id: req.params.id } }),
+      ]);
+      if (inventoryCount || orderItemCount) {
+        return {
+          status: 409,
+          error: 'This item has stock or order history and cannot be permanently deleted. Keep it deactivated to preserve those records.',
+        };
+      }
+
+      await tx.items.delete({ where: { item_id: req.params.id } });
+      return { status: 204 };
+    });
+
+    if (result.error) return res.status(result.status).json({ error: result.error });
+    res.status(result.status).end();
+  } catch (err) {
+    if (err.code === 'P2003') {
+      return res.status(409).json({
+        error: 'This item has linked stock or order history and cannot be permanently deleted. Keep it deactivated to preserve those records.',
+      });
+    }
+    handleError(res, err);
+  }
+};
