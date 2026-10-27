@@ -11,6 +11,17 @@ if (getToken() && existing && DASHBOARDS[existing.role]) {
   window.location.href = DASHBOARDS[existing.role];
 }
 
+document.querySelectorAll('[data-password-toggle]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const input = document.getElementById(button.getAttribute('aria-controls'));
+    const isVisible = input.type === 'text';
+    input.type = isVisible ? 'password' : 'text';
+    button.textContent = isVisible ? 'Show' : 'Hide';
+    button.setAttribute('aria-label', isVisible ? 'Show password' : 'Hide password');
+    button.setAttribute('aria-pressed', String(!isVisible));
+  });
+});
+
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   setMessage('login-message', '', true);

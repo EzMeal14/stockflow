@@ -19,7 +19,10 @@
         <input type="email" id="email" required autocomplete="username">
       </label>
       <label>Password
-        <input type="password" id="password" required autocomplete="current-password">
+        <div class="password-field">
+          <input type="password" id="password" required autocomplete="current-password">
+          <button type="button" class="secondary password-toggle" data-password-toggle aria-controls="password" aria-label="Show password" aria-pressed="false">Show</button>
+        </div>
       </label>
       <button type="submit">Sign in</button>
       <p id="login-message"></p>
@@ -33,7 +36,10 @@
         <label>Last name <input id="reg-last" required></label>
         <label>Email <input type="email" id="reg-email" required></label>
         <label>Password (8 or more characters)
-          <input type="password" id="reg-password" minlength="8" required autocomplete="new-password">
+          <div class="password-field">
+            <input type="password" id="reg-password" minlength="8" required autocomplete="new-password">
+            <button type="button" class="secondary password-toggle" data-password-toggle aria-controls="reg-password" aria-label="Show password" aria-pressed="false">Show</button>
+          </div>
         </label>
         <button type="submit">Create account</button>
         <p id="register-message"></p>
