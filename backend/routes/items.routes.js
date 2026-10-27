@@ -4,6 +4,8 @@ const { authenticate, requireRole } = require('../lib/auth');
 
 router.use(authenticate);
 
+router.get('/inactive', requireRole('admin'), items.listInactive);
+router.post('/:id/restore', requireRole('admin'), items.restore);
 router.get('/', requireRole('admin', 'staff', 'client'), items.list);
 router.get('/:id', requireRole('admin', 'staff', 'client'), items.getOne);
 router.post('/', requireRole('admin'), items.create);

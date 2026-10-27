@@ -2,6 +2,7 @@ const user = requireRole('admin');
 
 let ops = null;
 let staffCrud = null;
+let itemCrud = null;
 // After items, warehouses, vehicles, drivers or staff change, refresh the lists used by the other tabs.
 // The staff form also has a warehouse list, so it reloads when a warehouse is added or removed.
 const refreshOps = () => {
@@ -12,7 +13,7 @@ const refreshOps = () => {
 if (user) {
   setupTabs();
 
-  setupCrud({
+  itemCrud = setupCrud({
     root: 'items-root', path: '/items', idKey: 'item_id',
     hint: 'ID: leave it empty to get the next number automatically, or type a number (2 becomes ID-002). '
       + 'When you edit an item, an empty ID keeps the current one. Deactivating an item compacts IDs for active items.',
@@ -32,6 +33,7 @@ if (user) {
     ],
     describe: (saved) => 'Saved. ID: ' + saved.id,
   });
+  setupInactiveItems();
 
   setupCrud({
     root: 'warehouses-root', path: '/warehouses', idKey: 'warehouse_id',
@@ -121,6 +123,44 @@ function setupTabs() {
     document.querySelectorAll('[data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
   };
   document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
+}
+
+async function setupInactiveItems() {
+  const root = document.getElementById('inactive-items-root');
+  const message = document.getElementById('inactive-items-message');
+  const table = el('table');
+  root.replaceChildren(table);
+
+  async function load() {
+    const rows = await api('/items/inactive');
+    fillTable(table, [
+      { key: 'id', label: 'Archived ID' },
+      { key: 'name', label: 'Name' },
+      { key: 'description', label: 'Description' },
+      { key: 'unit_price', label: 'Price', format: money },
+    ], rows, (row) => [
+      btn('Restore', () => restore(row), 'secondary'),
+    ]);
+  }
+
+  async function restore(item) {
+    if (!confirm('Restore "' + item.name + '"? It will become active and receive the next available ID.')) return;
+    try {
+      await api('/items/' + item.item_id + '/restore', { method: 'POST' });
+      await Promise.all([load(), itemCrud.reloadTable()]);
+      refreshOps();
+      message.textContent = 'Item restored. Active IDs have been compacted.';
+      message.className = 'ok';
+    } catch (err) {
+      message.textContent = err.message;
+      message.className = 'error';
+    }
+  }
+
+  load().catch((err) => {
+    message.textContent = err.message;
+    message.className = 'error';
+  });
 }
 
 // One form and one table to add, edit and remove records.
@@ -239,5 +279,8 @@ function setupCrud(cfg) {
 
   load().catch((err) => say(err.message, false));
   loadSelects().catch((err) => say(err.message, false));
-  return { reload: () => loadSelects().catch((err) => say(err.message, false)) };
+  return {
+    reload: () => Promise.all([load(), loadSelects()]).catch((err) => say(err.message, false)),
+    reloadTable: () => load(),
+  };
 }
