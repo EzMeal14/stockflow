@@ -41,6 +41,9 @@ input:hover, select:hover { border-color: #aeb9c9; }
 input:disabled { background: #f1f3f6; color: var(--muted); }
 :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 input:focus, select:focus { outline: 0; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(14,111,104,.18); }
+.password-field { display: flex; gap: 8px; align-items: flex-end; margin-top: 6px; }
+.password-field input { flex: 1; min-width: 0; margin-top: 0; }
+.password-toggle { flex: none; margin-top: 0; padding: 0 12px; }
 button { height: 40px; padding: 0 16px; border: 1px solid var(--brand); border-radius: 8px; background: var(--brand); color: #fff; font: inherit; font-weight: 600; cursor: pointer; transition: background .15s, border-color .15s; }
 button:hover { background: var(--brand-dark); border-color: var(--brand-dark); }
 button.secondary { background: #fff; color: var(--ink); border-color: #cbd3de; }
