@@ -108,6 +108,23 @@ function money(v) {
   return v === null || v === undefined || v === '' ? '' : Number(v).toFixed(2);
 }
 
+function idSortValue(value) {
+  const text = String(value ?? '').trim().toUpperCase();
+  const digits = text.match(/\d+/g);
+  if (!digits) return text;
+  return digits.map((d) => d.padStart(9, '0')).join('');
+}
+
+function sortById(rows, key = 'id') {
+  return [...rows].sort((a, b) => {
+    const left = idSortValue(a[key]);
+    const right = idSortValue(b[key]);
+    if (left < right) return -1;
+    if (left > right) return 1;
+    return String(a[key] ?? '').localeCompare(String(b[key] ?? ''));
+  });
+}
+
 function fmtDate(s) {
   return s ? new Date(s).toLocaleString() : '';
 }
@@ -137,7 +154,7 @@ function fillTable(table, columns, rows, actionsFn, rowClassFn) {
     columns.forEach((c) => {
       const v = c.format ? c.format(r[c.key], r) : r[c.key];
       const text = v === null || v === undefined ? '' : String(v);
-      const cls = ['quantity', 'reorder_threshold', 'unit_price', 'quantity_change'].includes(c.key) ? 'num' : (c.key === 'sku' ? 'sku' : '');
+      const cls = ['quantity', 'reorder_threshold', 'unit_price', 'quantity_change'].includes(c.key) ? 'num' : (c.key === 'id' ? 'item-id' : '');
       const td = el('td', { class: cls });
       if ((c.key === 'status' || c.key === 'movement_type') && text) {
         td.append(el('span', { class: 'pill pill-' + text.toLowerCase().replace(/[^a-z]+/g, '-'), text: text.replace(/_/g, ' ') }));

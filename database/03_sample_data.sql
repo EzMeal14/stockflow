@@ -12,5 +12,5 @@ INSERT INTO users (user_id, firstname, lastname, email, password_hash, role) VAL
 ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Admin',  'User', 'admin@test.com',  'test', 'admin'),
 ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'Client', 'User', 'client@test.com', 'test', 'client');
 
-INSERT INTO items (item_id, sku, name, unit_price) VALUES
-('dddddddd-dddd-dddd-dddd-dddddddddddd', 'SKU-001', 'Test Item', 100);
+INSERT INTO items (item_id, id, name, unit_price) VALUES
+('dddddddd-dddd-dddd-dddd-dddddddddddd', 'ID-001', 'Test Item', 100);

@@ -43,7 +43,7 @@ model inventory {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model items {
   item_id     String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  sku         String        @unique @db.VarChar(100)
+  id          String        @unique @db.VarChar(100)
   name        String        @db.VarChar(200)
   description String?
   unit_price  Decimal       @db.Decimal(12, 2)

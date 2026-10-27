@@ -84,7 +84,7 @@ BEGIN
     ON CONFLICT (plate) DO NOTHING;
 
     -- ---------- 3. Items and opening stock ----------
-    -- One row per item: the SKU is the first free number (SKU-001, SKU-002, ...).
+    -- One row per item: the ID is the first free number (ID-001, ID-002, ...).
     -- Then the four quantities: Main, Bogo, Toledo, Carcar.
     -- Low stock is below 100. On purpose: Bogo is low on cement, hollow blocks and
     -- LED bulbs, and Toledo is OUT of 10 mm rebar (0), so the demo has something to show.
@@ -125,11 +125,11 @@ BEGIN
             next_no := 0;
             LOOP
                 next_no := next_no + 1;
-                cand := 'SKU-' || CASE WHEN next_no < 1000 THEN lpad(next_no::text, 3, '0')
+                cand := 'ID-' || CASE WHEN next_no < 1000 THEN lpad(next_no::text, 3, '0')
                                        ELSE next_no::text END;
-                EXIT WHEN NOT EXISTS (SELECT 1 FROM items WHERE sku = cand);
+                EXIT WHEN NOT EXISTS (SELECT 1 FROM items WHERE id = cand);
             END LOOP;
-            INSERT INTO items (sku, name, description, unit_price)
+            INSERT INTO items (id, name, description, unit_price)
             VALUES (cand, r.name, r.descr, r.price)
             RETURNING item_id INTO v_item_id;
         END IF;
@@ -155,7 +155,7 @@ UPDATE warehouses SET is_active = false
 WHERE name IN ('Cebu Main', 'Davao Branch') AND is_active;
 
 UPDATE items SET is_active = false
-WHERE sku = 'SKU-001' AND name = 'Test Item' AND is_active;
+WHERE id = 'ID-001' AND name = 'Test Item' AND is_active;
 
 -- ---------- 5. Check: one row per warehouse ----------
 SELECT w.name AS warehouse, w.city,

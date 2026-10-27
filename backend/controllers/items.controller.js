@@ -1,6 +1,6 @@
 const prisma = require('../lib/prisma');
 const { handleError } = require('../lib/errors');
-const { parseSku, nextSku } = require('../lib/sku');
+const { parseItemId, nextItemId } = require('../lib/item-id');
 
 // Warehouse staff must not see prices
 function forRole(user, item) {
@@ -37,21 +37,21 @@ exports.getOne = async (req, res) => {
   }
 };
 
-// The SKU is optional. Empty = next number. "2" = SKU-002. A full code is kept as typed.
+// The ID is optional. Empty = next number. "2" = ID-002. A full ID is kept as typed.
 exports.create = async (req, res) => {
   try {
     const { name, description, unit_price } = req.body;
-    const parsed = parseSku(req.body.sku);
+    const parsed = parseItemId(req.body.id);
     if (parsed.error) return res.status(400).json({ error: parsed.error });
     if (!name || !validPrice(unit_price)) {
       return res.status(400).json({ error: 'name and a unit_price of 0 or more are required' });
     }
 
-    let sku = parsed.sku;
+    let id = parsed.id;
     for (let attempt = 0; attempt < 3; attempt++) {
-      if (parsed.auto) sku = await nextSku(prisma);
+      if (parsed.auto) id = await nextItemId(prisma);
       try {
-        const item = await prisma.items.create({ data: { sku, name, description, unit_price } });
+        const item = await prisma.items.create({ data: { id, name, description, unit_price } });
         return res.status(201).json(item);
       } catch (err) {
         // Another admin took the same number a moment ago: try the next one
@@ -64,23 +64,23 @@ exports.create = async (req, res) => {
   }
 };
 
-// An empty SKU means "keep the current one"
+// An empty ID means "keep the current one".
 exports.update = async (req, res) => {
   try {
     const { name, description, unit_price } = req.body;
-    let sku;
-    const typed = req.body.sku;
+    let id;
+    const typed = req.body.id;
     if (typed !== undefined && typed !== null && String(typed).trim() !== '') {
-      const parsed = parseSku(typed);
+      const parsed = parseItemId(typed);
       if (parsed.error) return res.status(400).json({ error: parsed.error });
-      sku = parsed.sku;
+      id = parsed.id;
     }
     if (unit_price !== undefined && !validPrice(unit_price)) {
       return res.status(400).json({ error: 'unit_price must be 0 or more' });
     }
     const item = await prisma.items.update({
       where: { item_id: req.params.id },
-      data: { sku, name, description, unit_price },
+      data: { id, name, description, unit_price },
     });
     res.json(item);
   } catch (err) {
