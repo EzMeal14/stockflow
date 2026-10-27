@@ -27,6 +27,18 @@ exports.list = async (req, res) => {
   }
 };
 
+exports.listInactive = async (req, res) => {
+  try {
+    const items = await prisma.items.findMany({
+      where: { is_active: false },
+      orderBy: { name: 'asc' },
+    });
+    res.json(items);
+  } catch (err) {
+    handleError(res, err);
+  }
+};
+
 exports.getOne = async (req, res) => {
   try {
     const item = await prisma.items.findUnique({ where: { item_id: req.params.id } });
@@ -99,6 +111,27 @@ exports.deactivate = async (req, res) => {
       await renumberActiveItemIds(tx);
       return tx.items.findUnique({ where: { item_id: req.params.id } });
     });
+    res.json(item);
+  } catch (err) {
+    handleError(res, err);
+  }
+};
+
+exports.restore = async (req, res) => {
+  try {
+    const item = await prisma.$transaction(async (tx) => {
+      const current = await tx.items.findUnique({ where: { item_id: req.params.id } });
+      if (!current) return null;
+      if (!current.is_active) {
+        await tx.items.update({
+          where: { item_id: req.params.id },
+          data: { is_active: true },
+        });
+        await renumberActiveItemIds(tx);
+      }
+      return tx.items.findUnique({ where: { item_id: req.params.id } });
+    });
+    if (!item) return res.status(404).json({ error: 'Not found' });
     res.json(item);
   } catch (err) {
     handleError(res, err);
