@@ -19,6 +19,7 @@ if (user) {
       + 'An item keeps its ID when its name changes, or when it is deactivated and restored.',
     confirmText: 'Deactivate this item? Its ID and stock/order history will be kept.',
     removedMessage: 'Item deactivated. Its ID was kept.',
+    listPath: '/items/admin-catalog',
     fields: [
       { key: 'id', label: 'ID', placeholder: 'Empty = next number', immutableOnEdit: true },
       { key: 'name', label: 'Name', required: true },
@@ -30,6 +31,7 @@ if (user) {
       { key: 'name', label: 'Name' },
       { key: 'description', label: 'Description' },
       { key: 'unit_price', label: 'Price', format: money },
+      { key: 'total_stock', label: 'Total stock' },
     ],
     describe: (saved) => 'Saved. ID: ' + saved.id,
   });
@@ -138,6 +140,7 @@ async function setupInactiveItems() {
       { key: 'name', label: 'Name' },
       { key: 'description', label: 'Description' },
       { key: 'unit_price', label: 'Price', format: money },
+      { key: 'total_stock', label: 'Total stock' },
     ], rows, (row) => [
       btn('Restore', () => restore(row), 'secondary'),
       btn('Delete', () => deleteInactive(row), 'secondary'),
@@ -255,7 +258,7 @@ function setupCrud(cfg) {
   }
 
   async function load() {
-    const rows = await api(cfg.path);
+    const rows = await api(cfg.listPath || cfg.path);
     const sortedRows = cfg.columns.some((c) => c.key === 'id') ? sortById(rows, 'id') : rows;
     fillTable(table, cfg.columns, sortedRows, (row) => [
       canEdit ? btn('Edit', () => startEdit(row)) : null,
