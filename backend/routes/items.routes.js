@@ -6,6 +6,7 @@ router.use(authenticate);
 
 router.get('/inactive', requireRole('admin'), items.listInactive);
 router.post('/:id/restore', requireRole('admin'), items.restore);
+router.delete('/:id/permanent', requireRole('admin'), items.deleteInactive);
 router.get('/', requireRole('admin', 'staff', 'client'), items.list);
 router.get('/:id', requireRole('admin', 'staff', 'client'), items.getOne);
 router.post('/', requireRole('admin'), items.create);

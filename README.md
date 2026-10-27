@@ -116,7 +116,12 @@ Send the login token in the header: `Authorization: Bearer YOUR_TOKEN`. Only `/a
 |---|---|---|
 | Auth | `POST /auth/register`, `POST /auth/login` | Anyone |
 | Items | `GET /items`, `GET /items/:id` | admin, staff, client |
-| | `POST /items`, `PUT /items/:id`, `DELETE /items/:id` | admin |
+| | `GET /items/inactive`, `POST /items/:id/restore`, `DELETE /items/:id/permanent` | admin |
+| | `POST /items`, `PUT /items/:id`, `DELETE /items/:id` (deactivate) | admin |
+
+Permanently deleting an inactive item is allowed only if it has no inventory or
+order-item references. Items with stock or order history must remain deactivated
+so their related records are preserved.
 | Warehouses | `GET /warehouses` | admin, staff (own), client (name and city) |
 | | `GET /warehouses/:id`, `GET /warehouses/:id/inventory` | admin, staff (own) |
 | | `POST /warehouses`, `PUT /warehouses/:id`, `DELETE /warehouses/:id` | admin |
