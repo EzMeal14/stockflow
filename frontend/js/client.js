@@ -22,7 +22,7 @@ async function loadWarehouses() {
 }
 
 async function loadCatalog() {
-  const items = sortById(await api('/items'), 'id');
+  const items = sortById(await api('/items/catalog'), 'id');
   itemMap = indexBy(items, 'item_id');
   const body = document.getElementById('catalog');
   body.replaceChildren();
@@ -32,7 +32,7 @@ async function loadCatalog() {
     const available = el('td', { class: 'available', text: '...' });
     body.append(el('tr', null,
       el('td', { text: item.id }),
-      el('td', { text: item.name }),
+      el('td', { text: item.is_active ? item.name : item.name + ' (deactivated)' }),
       el('td', { text: money(item.unit_price) }),
       available,
       el('td', null, input)));
@@ -63,10 +63,14 @@ function showAvailability() {
   document.querySelectorAll('#catalog tr').forEach((row) => {
     const input = row.querySelector('input');
     const units = availability[input.dataset.itemId] || 0;
-    row.querySelector('.available').textContent = units > 0 ? String(units) : 'Out of stock';
+    const item = itemMap[input.dataset.itemId];
+    const availabilityText = units > 0 ? String(units) : 'Out of stock';
+    row.querySelector('.available').textContent = item && !item.is_active
+      ? availabilityText + ' (deactivated)'
+      : availabilityText;
     input.max = String(units);
-    input.disabled = units === 0;
-    if (units === 0 || Number(input.value) > units) input.value = '0';
+    input.disabled = units === 0 || !item || !item.is_active;
+    if (input.disabled || Number(input.value) > units) input.value = '0';
   });
 }
 
