@@ -76,7 +76,7 @@ A product that can be stocked and ordered.
 | Column | Type | Key | Null? | Default | Meaning |
 |---|---|---|---|---|---|
 | item_id | uuid | PK | NN | generated | Unique ID of the item |
-| id | varchar(100) | UQ | NN | | Human-readable item ID. Active IDs are compacted after an item is deactivated; UUID `item_id` references remain stable |
+| id | varchar(100) | UQ | NN | | Stable human-readable item ID; unchanged by renaming, deactivation, or restoration. UUID `item_id` references also remain stable |
 | name | varchar(200) | | NN | | Item name |
 | description | text | | Yes | | Optional details |
 | unit_price | numeric(12,2) | | NN | | Current price. Must be 0 or more |
