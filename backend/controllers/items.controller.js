@@ -1,6 +1,6 @@
 const prisma = require('../lib/prisma');
 const { handleError } = require('../lib/errors');
-const { parseItemId, nextItemId } = require('../lib/item-id');
+const { parseItemId, nextItemId, renumberActiveItemIds } = require('../lib/item-id');
 
 // Warehouse staff must not see prices
 function forRole(user, item) {
@@ -91,9 +91,13 @@ exports.update = async (req, res) => {
 // "DELETE" = soft delete. The app role is not allowed to delete rows.
 exports.deactivate = async (req, res) => {
   try {
-    const item = await prisma.items.update({
-      where: { item_id: req.params.id },
-      data: { is_active: false },
+    const item = await prisma.$transaction(async (tx) => {
+      await tx.items.update({
+        where: { item_id: req.params.id },
+        data: { is_active: false },
+      });
+      await renumberActiveItemIds(tx);
+      return tx.items.findUnique({ where: { item_id: req.params.id } });
     });
     res.json(item);
   } catch (err) {
