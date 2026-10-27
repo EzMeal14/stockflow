@@ -27,6 +27,24 @@ exports.list = async (req, res) => {
   }
 };
 
+exports.clientCatalog = async (req, res) => {
+  try {
+    const items = await prisma.items.findMany({
+      select: {
+        item_id: true,
+        id: true,
+        name: true,
+        unit_price: true,
+        is_active: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+    res.json(items);
+  } catch (err) {
+    handleError(res, err);
+  }
+};
+
 exports.listInactive = async (req, res) => {
   try {
     const items = await prisma.items.findMany({

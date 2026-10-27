@@ -4,6 +4,7 @@ const { authenticate, requireRole } = require('../lib/auth');
 
 router.use(authenticate);
 
+router.get('/catalog', requireRole('client'), items.clientCatalog);
 router.get('/inactive', requireRole('admin'), items.listInactive);
 router.post('/:id/restore', requireRole('admin'), items.restore);
 router.delete('/:id/permanent', requireRole('admin'), items.deleteInactive);

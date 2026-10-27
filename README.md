@@ -116,6 +116,7 @@ Send the login token in the header: `Authorization: Bearer YOUR_TOKEN`. Only `/a
 |---|---|---|
 | Auth | `POST /auth/register`, `POST /auth/login` | Anyone |
 | Items | `GET /items`, `GET /items/:id` | admin, staff, client |
+| | `GET /items/catalog` (active and deactivated items for client stock reference) | client |
 | | `GET /items/inactive`, `POST /items/:id/restore`, `DELETE /items/:id/permanent` | admin |
 | | `POST /items`, `PUT /items/:id`, `DELETE /items/:id` (deactivate) | admin |
 
