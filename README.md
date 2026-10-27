@@ -85,6 +85,12 @@ node index.js
 
 The API runs on `http://localhost:3000`. The database itself is in the cloud.
 
+## Publish the Frontend on GitHub Pages
+
+In the repository settings, open **Pages** and set the build and deployment source to **GitHub Actions**. The Pages workflow publishes the `frontend/` directory when changes are pushed to `main`; it can also be started manually from the Actions tab.
+
+GitHub Pages hosts only the static frontend. The frontend currently calls `http://localhost:3000`, so the hosted pages will not connect to a live API. To make the app fully functional online, host the backend separately, set `API_BASE` in `frontend/js/config.js` to its public URL, and allow the Pages origin in the backend's CORS configuration. Do not put database credentials or other secrets in frontend files.
+
 ## User Roles
 
 | Role | Can do |
