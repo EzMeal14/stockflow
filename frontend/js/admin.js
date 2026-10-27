@@ -15,7 +15,9 @@ if (user) {
   setupCrud({
     root: 'items-root', path: '/items', idKey: 'item_id',
     hint: 'ID: leave it empty to get the next number automatically, or type a number (2 becomes ID-002). '
-      + 'When you edit an item, an empty ID keeps the current one.',
+      + 'When you edit an item, an empty ID keeps the current one. Deactivating an item compacts IDs for active items.',
+    confirmText: 'Deactivate this item? IDs for active items will be compacted. Stock and order history links remain unchanged.',
+    removedMessage: 'Item deactivated. Active item IDs were compacted.',
     fields: [
       { key: 'id', label: 'ID', placeholder: 'Empty = next number' },
       { key: 'name', label: 'Name', required: true },
