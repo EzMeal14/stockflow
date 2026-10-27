@@ -15,6 +15,18 @@ function validPrice(value) {
   return value !== undefined && value !== null && value !== '' && !Number.isNaN(Number(value)) && Number(value) >= 0;
 }
 
+async function addTotalStock(items) {
+  const totals = await prisma.inventory.groupBy({
+    by: ['item_id'],
+    _sum: { quantity: true },
+  });
+  const totalByItem = new Map(totals.map((row) => [row.item_id, row._sum.quantity || 0]));
+  return items.map((item) => ({
+    ...item,
+    total_stock: totalByItem.get(item.item_id) || 0,
+  }));
+}
+
 exports.list = async (req, res) => {
   try {
     const items = await prisma.items.findMany({
@@ -22,6 +34,18 @@ exports.list = async (req, res) => {
       orderBy: { name: 'asc' },
     });
     res.json(items.map((i) => forRole(req.user, i)));
+  } catch (err) {
+    handleError(res, err);
+  }
+};
+
+exports.listAdmin = async (req, res) => {
+  try {
+    const items = await prisma.items.findMany({
+      where: { is_active: true },
+      orderBy: { name: 'asc' },
+    });
+    res.json(await addTotalStock(items));
   } catch (err) {
     handleError(res, err);
   }
@@ -51,7 +75,7 @@ exports.listInactive = async (req, res) => {
       where: { is_active: false },
       orderBy: { name: 'asc' },
     });
-    res.json(items);
+    res.json(await addTotalStock(items));
   } catch (err) {
     handleError(res, err);
   }
