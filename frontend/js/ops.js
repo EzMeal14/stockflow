@@ -12,7 +12,7 @@ async function initOps(ctx) {
 
   const current = () => ctx.warehouseId || (wsel ? wsel.value : '');
   const itemName = (id) => (state.itemMap[id] ? state.itemMap[id].name : shortId(id));
-  const itemSku = (id) => (state.itemMap[id] ? state.itemMap[id].sku : '');
+  const itemId = (id) => (state.itemMap[id] ? state.itemMap[id].id : '');
   const warehouseLabel = (w) => w.name + ' (' + w.city + ')';
 
   // Run something and show any error in a message line
@@ -35,17 +35,18 @@ async function initOps(ctx) {
     const [items, drivers, vehicles, warehouses] = await Promise.all([
       api('/items'), api('/lookups/drivers'), api('/vehicles'), api('/lookups/warehouses'),
     ]);
-    state.items = items;
-    state.itemMap = indexBy(items, 'item_id');
+    const sortedItems = sortById(items, 'id');
+    state.items = sortedItems;
+    state.itemMap = indexBy(sortedItems, 'item_id');
     state.drivers = drivers;
     state.driverMap = indexBy(drivers, 'user_id');
     state.vehicles = vehicles;
     state.vehicleMap = indexBy(vehicles, 'vehicle_id');
     state.warehouses = warehouses;
 
-    const itemLabel = (i) => i.sku + ' - ' + i.name;
-    fillSelect($('restock-item'), items, (i) => i.item_id, itemLabel);
-    fillSelect($('transfer-item'), items, (i) => i.item_id, itemLabel);
+    const itemLabel = (i) => i.id + ' - ' + i.name;
+    fillSelect($('restock-item'), sortedItems, (i) => i.item_id, itemLabel);
+    fillSelect($('transfer-item'), sortedItems, (i) => i.item_id, itemLabel);
     fillSelect($('ship-driver'), drivers, (d) => d.user_id, (d) => d.firstname + ' ' + d.lastname);
     fillSelect($('ship-vehicle'), vehicles, (v) => v.vehicle_id, (v) => v.plate + ' (' + v.type + ')');
     if (wsel) fillSelect(wsel, warehouses, (w) => w.warehouse_id, warehouseLabel);
@@ -70,7 +71,7 @@ async function initOps(ctx) {
   async function loadStock() {
     const wid = current();
     const cols = [
-      { key: 'sku', label: 'SKU' },
+      { key: 'id', label: 'ID' },
       { key: 'name', label: 'Item' },
       { key: 'quantity', label: 'Quantity' },
       { key: 'reorder_threshold', label: 'Reorder level' },
@@ -80,21 +81,21 @@ async function initOps(ctx) {
       return;
     }
     const rows = await api('/warehouses/' + wid + '/inventory');
-    const view = rows.map((r) => ({
-      sku: itemSku(r.item_id),
+    const view = sortById(rows.map((r) => ({
+      id: itemId(r.item_id),
       name: itemName(r.item_id),
       quantity: r.quantity,
       reorder_threshold: r.reorder_threshold,
-    }));
+    })), 'id');
     fillTable($('stock-table'), cols, view, null,
       (r) => (r.quantity < r.reorder_threshold ? 'low' : ''));
   }
 
   async function loadLow() {
-    const rows = await api('/stock/low');
+    const rows = sortById(await api('/stock/low'), 'id');
     fillTable($('low-table'), [
       { key: 'warehouse', label: 'Warehouse' },
-      { key: 'sku', label: 'SKU' },
+      { key: 'id', label: 'ID' },
       { key: 'item', label: 'Item' },
       { key: 'quantity', label: 'Quantity' },
       { key: 'reorder_threshold', label: 'Reorder level' },

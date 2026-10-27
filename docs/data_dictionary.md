@@ -76,7 +76,7 @@ A product that can be stocked and ordered.
 | Column | Type | Key | Null? | Default | Meaning |
 |---|---|---|---|---|---|
 | item_id | uuid | PK | NN | generated | Unique ID of the item |
-| sku | varchar(100) | UQ | NN | | Stock code, no duplicates |
+| id | varchar(100) | UQ | NN | | Human-readable item ID, no duplicates |
 | name | varchar(200) | | NN | | Item name |
 | description | text | | Yes | | Optional details |
 | unit_price | numeric(12,2) | | NN | | Current price. Must be 0 or more |
@@ -204,14 +204,14 @@ A log of data changes (who, what, when). Triggers fill it.
 | order_items | check | `quantity > 0` and `unit_price >= 0` |
 | stock_movements | check | `quantity_change <> 0` |
 | users | unique | `email` |
-| items | unique | `sku` |
+| items | unique | `id` |
 | vehicles | unique | `plate` |
 
 ## 6. View
 
 | View | What it shows |
 |---|---|
-| `v_low_stock` | Items where `quantity < reorder_threshold`, with warehouse name and SKU. It follows the caller's permissions (`security_invoker = true`). |
+| `v_low_stock` | Items where `quantity < reorder_threshold`, with warehouse name and item ID. It follows the caller's permissions (`security_invoker = true`). |
 
 ## 7. Triggers
 

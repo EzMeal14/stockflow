@@ -43,7 +43,7 @@ CREATE TABLE users (
 -- ---------- 3. items ----------
 CREATE TABLE items (
     item_id     uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    sku         varchar(100)  NOT NULL UNIQUE,
+    id          varchar(100)  NOT NULL UNIQUE,
     name        varchar(200)  NOT NULL,
     description text,
     unit_price  numeric(12,2) NOT NULL CHECK (unit_price >= 0),
@@ -175,7 +175,7 @@ CREATE INDEX idx_inventory_low_stock    ON inventory (warehouse_id) WHERE quanti
 CREATE OR REPLACE VIEW v_low_stock AS
 SELECT w.warehouse_id,
        w.name        AS warehouse,
-       i.sku,
+       i.id,
        i.name        AS item,
        inv.quantity,
        inv.reorder_threshold

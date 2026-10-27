@@ -22,7 +22,7 @@ async function loadWarehouses() {
 }
 
 async function loadCatalog() {
-  const items = await api('/items');
+  const items = sortById(await api('/items'), 'id');
   itemMap = indexBy(items, 'item_id');
   const body = document.getElementById('catalog');
   body.replaceChildren();
@@ -31,7 +31,7 @@ async function loadCatalog() {
     input.dataset.itemId = item.item_id;
     const available = el('td', { class: 'available', text: '...' });
     body.append(el('tr', null,
-      el('td', { text: item.sku }),
+      el('td', { text: item.id }),
       el('td', { text: item.name }),
       el('td', { text: money(item.unit_price) }),
       available,

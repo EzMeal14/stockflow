@@ -14,21 +14,21 @@ if (user) {
 
   setupCrud({
     root: 'items-root', path: '/items', idKey: 'item_id',
-    hint: 'SKU: leave it empty to get the next number automatically, or type a number (2 becomes SKU-002). '
-      + 'When you edit an item, an empty SKU keeps the current one.',
+    hint: 'ID: leave it empty to get the next number automatically, or type a number (2 becomes ID-002). '
+      + 'When you edit an item, an empty ID keeps the current one.',
     fields: [
-      { key: 'sku', label: 'SKU', placeholder: 'Empty = next number' },
+      { key: 'id', label: 'ID', placeholder: 'Empty = next number' },
       { key: 'name', label: 'Name', required: true },
       { key: 'description', label: 'Description' },
       { key: 'unit_price', label: 'Price', type: 'number', step: '0.01', required: true },
     ],
     columns: [
-      { key: 'sku', label: 'SKU' },
+      { key: 'id', label: 'ID' },
       { key: 'name', label: 'Name' },
       { key: 'description', label: 'Description' },
       { key: 'unit_price', label: 'Price', format: money },
     ],
-    describe: (saved) => 'Saved. SKU: ' + saved.sku,
+    describe: (saved) => 'Saved. ID: ' + saved.id,
   });
 
   setupCrud({
@@ -192,7 +192,8 @@ function setupCrud(cfg) {
 
   async function load() {
     const rows = await api(cfg.path);
-    fillTable(table, cfg.columns, rows, (row) => [
+    const sortedRows = cfg.columns.some((c) => c.key === 'id') ? sortById(rows, 'id') : rows;
+    fillTable(table, cfg.columns, sortedRows, (row) => [
       canEdit ? btn('Edit', () => startEdit(row)) : null,
       btn(cfg.removeLabel || 'Deactivate', () => remove(row), 'secondary'),
     ].filter(Boolean));

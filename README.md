@@ -51,6 +51,12 @@ Run these in the Supabase SQL Editor, in order, and only once each.
 | `03_sample_data.sql` | Optional demo data |
 | `04_tests.sql` | Optional tests. Run one test at a time, not the whole file |
 | `05_roles_policies.sql` | The limited `stockflow_app` role. Change `CHANGE_ME` to a real password first, and never commit the real one |
+| `10_rename_sku_to_id.sql` | Existing databases only: renames the item code column to `id` and changes `SKU-` values to `ID-` |
+
+Before deploying the item-ID backend update to an existing database, run
+`10_rename_sku_to_id.sql` in the Supabase SQL Editor. It checks for ID
+conflicts and rolls back rather than overwriting duplicate values. New databases
+should use `01_schema.sql` and do not need this migration.
 
 The data dictionary is in `docs/data_dictionary.md`.
 
