@@ -47,8 +47,7 @@ async function initOps(ctx) {
     const itemLabel = (i) => i.id + ' - ' + i.name;
     fillSelect($('restock-item'), sortedItems, (i) => i.item_id, itemLabel);
     fillSelect($('transfer-item'), sortedItems, (i) => i.item_id, itemLabel);
-    fillSelect($('ship-driver'), drivers, (d) => d.user_id, (d) => d.firstname + ' ' + d.lastname);
-    fillSelect($('ship-vehicle'), vehicles, (v) => v.vehicle_id, (v) => v.plate + ' (' + v.type + ')');
+    fillShipResources();
     if (wsel) fillSelect(wsel, warehouses, (w) => w.warehouse_id, warehouseLabel);
     fillDestinations();
   }
@@ -56,6 +55,23 @@ async function initOps(ctx) {
   function fillDestinations() {
     const others = state.warehouses.filter((w) => w.warehouse_id !== current());
     fillSelect($('transfer-dest'), others, (w) => w.warehouse_id, warehouseLabel);
+  }
+
+  function fillShipResources() {
+    const activeStatuses = new Set(['assigned', 'in_transit']);
+    const busyDrivers = new Set(state.ships.filter((s) => activeStatuses.has(s.status)).map((s) => s.driver_id));
+    const busyVehicles = new Set(state.ships.filter((s) => activeStatuses.has(s.status)).map((s) => s.vehicle_id));
+
+    const availableDrivers = state.drivers.filter((d) => !busyDrivers.has(d.user_id));
+    const availableVehicles = state.vehicles.filter((v) => !busyVehicles.has(v.vehicle_id));
+    fillSelect($('ship-driver'), availableDrivers, (d) => d.user_id,
+      (d) => d.firstname + ' ' + d.lastname);
+    fillSelect($('ship-vehicle'), availableVehicles, (v) => v.vehicle_id,
+      (v) => v.plate + ' (' + v.type + ')');
+
+    if (!availableDrivers.length) {
+      setMessage('ship-msg', 'No drivers are available. A driver becomes available after delivered or failed.', false);
+    }
   }
 
   // Only confirmed orders that have no shipment yet can be shipped
@@ -143,6 +159,7 @@ async function initOps(ctx) {
       { key: 'delivered_at', label: 'Arrived', format: fmtDate },
     ];
     fillTable($('ship-table'), cols, state.ships);
+    fillShipResources();
   }
 
   const refreshStock = () => Promise.all([loadStock(), loadLow(), loadMoves()]);
