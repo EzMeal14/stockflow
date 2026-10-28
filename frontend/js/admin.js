@@ -19,6 +19,7 @@ if (user) {
   setupCrud({
     root: 'warehouses-root', path: '/warehouses', idKey: 'warehouse_id',
     tileLayout: true, entityName: 'warehouse', tileType: 'Warehouse', tilePlural: 'Warehouses', tileMark: 'WH',
+    photoField: true,
     tileTitle: (row) => row.name,
     tileDetails: [{ key: 'address', label: 'Address' }, { key: 'city', label: 'City' }],
     fields: [
@@ -52,6 +53,7 @@ if (user) {
   setupCrud({
     root: 'drivers-root', path: '/drivers', idKey: 'user_id',
     tileLayout: true, entityName: 'driver', tileType: 'Driver', tilePlural: 'Drivers', tileMark: 'DR',
+    photoField: true,
     tileTitle: (row) => row.firstname + ' ' + row.lastname,
     tileDetails: [{ key: 'email', label: 'Email' }, { key: 'contact_number', label: 'Contact' }],
     canEdit: false,
@@ -79,6 +81,7 @@ if (user) {
   staffCrud = setupCrud({
     root: 'staff-root', path: '/staff', idKey: 'user_id',
     tileLayout: true, entityName: 'staff member', tileType: 'Staff', tilePlural: 'Staff', tileMark: 'ST',
+    photoField: true,
     tileTitle: (row) => row.firstname + ' ' + row.lastname,
     tileDetails: [
       { key: 'email', label: 'Email' },
@@ -122,6 +125,28 @@ function setupTabs() {
   document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
 }
 
+async function compressImage(file) {
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    throw new Error('Choose a JPG, PNG, or WebP image.');
+  }
+  if (file.size > 5 * 1024 * 1024) throw new Error('Image files must be 5 MB or smaller.');
+  const bitmap = await createImageBitmap(file);
+  try {
+    const scale = Math.min(1, 900 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Your browser could not process this image.');
+    context.fillStyle = '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.82);
+  } finally {
+    bitmap.close();
+  }
+}
+
 function setupItemManager() {
   const root = document.getElementById('items-root');
   const gridRoot = document.getElementById('items-grid-root');
@@ -161,10 +186,23 @@ function setupItemManager() {
     el('div', { class: 'item-form-actions' }, submit, cancel)
   );
   const listMessage = el('p');
+  const searchInput = el('input', {
+    type: 'search',
+    class: 'item-search-input',
+    placeholder: 'Search by item name or ID',
+    'aria-label': 'Search items by name or ID',
+    autocomplete: 'off',
+  });
+  const searchStatus = el('p', { class: 'muted item-search-status', 'aria-live': 'polite' });
+  const searchBar = el('div', { class: 'item-search' },
+    el('label', null, 'Search items', searchInput),
+    searchStatus
+  );
   root.replaceChildren(form);
-  gridRoot.replaceChildren(listMessage, grid);
+  gridRoot.replaceChildren(listMessage, searchBar, grid);
 
   let editingItem = null;
+  let activeItems = [];
   let selectedImageData = null;
   let removeExistingImage = false;
 
@@ -183,6 +221,12 @@ function setupItemManager() {
   function say(text, ok) {
     formMessage.textContent = text || '';
     formMessage.className = text ? (ok ? 'ok' : 'error') : '';
+  }
+
+  function hasDuplicateName(name) {
+    const normalized = name.trim().replace(/\s+/g, ' ').toLowerCase();
+    return activeItems.some((item) => item.item_id !== (editingItem && editingItem.item_id)
+      && item.name.trim().replace(/\s+/g, ' ').toLowerCase() === normalized);
   }
 
   function reset() {
@@ -223,9 +267,29 @@ function setupItemManager() {
 
   async function load() {
     const items = sortById(await api('/items/admin-catalog'), 'id');
+    activeItems = items;
+    renderItems();
+  }
+
+  function renderItems() {
     grid.replaceChildren();
-    if (!items.length) {
+    const query = searchInput.value.trim().toLocaleLowerCase();
+    const items = activeItems.filter((item) =>
+      !query
+      || item.name.toLocaleLowerCase().includes(query)
+      || item.id.toLocaleLowerCase().includes(query)
+    );
+    if (!activeItems.length) {
+      searchBar.hidden = true;
       grid.append(el('div', { class: 'item-empty', text: 'No active items yet. Add your first item above.' }));
+      return;
+    }
+    searchBar.hidden = false;
+    searchStatus.textContent = query
+      ? items.length + (items.length === 1 ? ' item found' : ' items found')
+      : activeItems.length + (activeItems.length === 1 ? ' item' : ' items');
+    if (!items.length) {
+      grid.append(el('div', { class: 'item-empty', text: 'No items match your search.' }));
       return;
     }
     items.forEach((item) => {
@@ -245,28 +309,6 @@ function setupItemManager() {
       say('Item deactivated. Its ID was kept.', true);
     } catch (err) {
       say(err.message, false);
-    }
-  }
-
-  async function compressImage(file) {
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      throw new Error('Choose a JPG, PNG, or WebP image.');
-    }
-    if (file.size > 5 * 1024 * 1024) throw new Error('Image files must be 5 MB or smaller.');
-    const bitmap = await createImageBitmap(file);
-    try {
-      const scale = Math.min(1, 900 / Math.max(bitmap.width, bitmap.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-      const context = canvas.getContext('2d');
-      if (!context) throw new Error('Your browser could not process this image.');
-      context.fillStyle = '#ffffff';
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-      return canvas.toDataURL('image/jpeg', 0.82);
-    } finally {
-      bitmap.close();
     }
   }
 
@@ -306,9 +348,22 @@ function setupItemManager() {
   });
 
   cancel.addEventListener('click', reset);
+  searchInput.addEventListener('input', renderItems);
+  nameInput.addEventListener('input', () => {
+    if (nameInput.value.trim() && hasDuplicateName(nameInput.value)) {
+      say('Item already exists.', false);
+    } else {
+      say('', true);
+    }
+  });
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     say('', true);
+    if (hasDuplicateName(nameInput.value)) {
+      say('Item already exists.', false);
+      nameInput.focus();
+      return;
+    }
     const body = {
       id: idInput.value.trim(),
       name: nameInput.value.trim(),
@@ -409,6 +464,13 @@ function renderItemTile(item, actions, inactive = false) {
 }
 
 function renderRecordTile(row, cfg, actions) {
+  const photo = cfg.photoField && row.photo_data
+    ? el('img', { class: 'item-card-image', src: row.photo_data, alt: cfg.tileTitle(row), loading: 'lazy' })
+    : el('div', { class: 'item-card-placeholder' },
+      el('span', { class: 'no-image-icon', 'aria-hidden': 'true' }),
+      el('strong', { text: 'No photo' }),
+      el('span', { text: 'No photo attached' })
+    );
   const details = cfg.tileDetails.map((field) => {
     const raw = row[field.key];
     const value = raw === null || raw === undefined || raw === '' ? 'Not provided' : String(raw);
@@ -418,10 +480,12 @@ function renderRecordTile(row, cfg, actions) {
     );
   });
   return el('article', { class: 'item-card record-card' },
-    el('div', { class: 'item-card-media record-card-media' },
-      el('span', { class: 'record-tile-icon', text: cfg.tileMark }),
-      el('span', { class: 'record-tile-label', text: cfg.tileType })
-    ),
+    el('div', { class: 'item-card-media record-card-media' }, cfg.photoField
+      ? photo
+      : el('div', null,
+        el('span', { class: 'record-tile-icon', text: cfg.tileMark }),
+        el('span', { class: 'record-tile-label', text: cfg.tileType })
+      )),
     el('div', { class: 'item-card-content' },
       el('h3', { class: 'record-card-title', text: cfg.tileTitle(row) }),
       el('div', { class: 'record-card-details' }, details),
@@ -442,6 +506,9 @@ function setupCrud(cfg) {
   const selects = [];
   let editingId = null;
   const isTileLayout = cfg.tileLayout === true;
+  const photoKey = cfg.photoField ? 'photo_data' : null;
+  let selectedPhotoData = null;
+  let removeExistingPhoto = false;
 
   const msg = el('p');
   const say = (text, ok) => { msg.textContent = text || ''; msg.className = text ? (ok ? 'ok' : 'error') : ''; };
@@ -478,6 +545,24 @@ function setupCrud(cfg) {
     inputs[f.key] = input;
     fieldContainer.append(el('label', null, f.label, input));
   });
+  let photoInput = null;
+  let photoPreview = null;
+  let photoHelp = null;
+  let removePhotoButton = null;
+  if (photoKey) {
+    photoInput = el('input', { type: 'file', accept: 'image/jpeg,image/png,image/webp' });
+    photoPreview = el('div', { class: 'item-image-preview record-photo-preview' });
+    photoHelp = el('p', { class: 'muted image-help', text: 'Optional: attach a JPG, PNG, or WebP photo (up to 5 MB).' });
+    removePhotoButton = el('button', { type: 'button', class: 'link-button image-remove', hidden: true, text: 'Remove photo' });
+    const photoField = el('div', { class: 'record-photo-field' },
+      el('span', { class: 'field-label', text: 'Photo (optional)' }),
+      photoPreview,
+      el('label', { class: 'image-upload' }, 'Attach photo', photoInput),
+      photoHelp,
+      removePhotoButton
+    );
+    fieldContainer.append(photoField);
+  }
   if (isTileLayout) {
     form.append(fieldContainer);
     form.append(el('div', { class: 'record-form-actions' }, submit, canEdit ? cancel : null));
@@ -503,9 +588,28 @@ function setupCrud(cfg) {
     : table;
   root.replaceChildren(...[form, hint, msg, listing].filter(Boolean));
 
+  function setPhotoPreview(photoData) {
+    if (photoData) {
+      photoPreview.replaceChildren(el('img', { src: photoData, alt: 'Selected photo' }));
+    } else {
+      photoPreview.replaceChildren(
+        el('span', { class: 'no-image-icon', 'aria-hidden': 'true' }),
+        el('strong', { text: 'No photo' }),
+        el('span', { text: 'Attach a photo if available' })
+      );
+    }
+  }
+
   function reset() {
     editingId = null;
     form.reset();
+    selectedPhotoData = null;
+    removeExistingPhoto = false;
+    if (photoKey) {
+      setPhotoPreview(null);
+      removePhotoButton.hidden = true;
+      photoHelp.textContent = 'Optional: attach a JPG, PNG, or WebP photo (up to 5 MB).';
+    }
     cfg.fields.forEach((f) => {
       if (f.immutableOnEdit) inputs[f.key].disabled = false;
     });
@@ -520,6 +624,16 @@ function setupCrud(cfg) {
       inputs[f.key].value = row[f.key] === null || row[f.key] === undefined ? '' : row[f.key];
       if (f.immutableOnEdit) inputs[f.key].disabled = true;
     });
+    if (photoKey) {
+      selectedPhotoData = null;
+      removeExistingPhoto = false;
+      photoInput.value = '';
+      setPhotoPreview(row[photoKey] || null);
+      removePhotoButton.hidden = !row[photoKey];
+      photoHelp.textContent = row[photoKey]
+        ? 'Choose a new photo to replace this one, or remove it.'
+        : 'Optional: attach a JPG, PNG, or WebP photo (up to 5 MB).';
+    }
     submit.textContent = 'Save changes';
     cancel.hidden = false;
     if (isTileLayout) {
@@ -535,6 +649,44 @@ function setupCrud(cfg) {
       const rows = await api(field.optionsPath);
       fillSelect(input, rows, (r) => r[field.optionValue], field.optionLabel);
     }
+  }
+
+  if (photoKey) {
+    photoInput.addEventListener('change', async () => {
+      const file = photoInput.files[0];
+      if (!file) return;
+      submit.disabled = true;
+      photoInput.disabled = true;
+      photoHelp.textContent = 'Processing photo...';
+      try {
+        selectedPhotoData = await compressImage(file);
+        if (selectedPhotoData.length > 1500000) {
+          throw new Error('The compressed photo is too large. Choose a different image.');
+        }
+        removeExistingPhoto = false;
+        setPhotoPreview(selectedPhotoData);
+        removePhotoButton.hidden = false;
+        photoHelp.textContent = 'Photo ready. It will be saved with this record.';
+        say('', true);
+      } catch (err) {
+        photoInput.value = '';
+        say(err.message, false);
+        photoHelp.textContent = 'Optional: attach a JPG, PNG, or WebP photo (up to 5 MB).';
+      } finally {
+        submit.disabled = false;
+        photoInput.disabled = false;
+      }
+    });
+
+    removePhotoButton.addEventListener('click', () => {
+      selectedPhotoData = null;
+      removeExistingPhoto = !!editingId;
+      photoInput.value = '';
+      setPhotoPreview(null);
+      removePhotoButton.hidden = true;
+      photoHelp.textContent = editingId ? 'The photo will be removed when you save.' : 'Optional: attach a JPG, PNG, or WebP photo (up to 5 MB).';
+    });
+    setPhotoPreview(null);
   }
 
   async function load() {
@@ -585,6 +737,8 @@ function setupCrud(cfg) {
       if (f.type === 'number') body[f.key] = v === '' ? null : Number(v);
       else body[f.key] = v === '' && !f.required ? null : v;
     });
+    if (photoKey && selectedPhotoData) body[photoKey] = selectedPhotoData;
+    else if (photoKey && removeExistingPhoto) body[photoKey] = null;
     try {
       const saved = editingId
         ? await api(cfg.path + '/' + editingId, { method: 'PUT', body })

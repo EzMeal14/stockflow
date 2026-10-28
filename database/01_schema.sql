@@ -18,6 +18,7 @@ CREATE TABLE warehouses (
     name         varchar(200) NOT NULL,
     address      text         NOT NULL,
     city         varchar(120) NOT NULL,
+    photo_data   text,
     is_active    boolean      NOT NULL DEFAULT true
 );
 
@@ -31,6 +32,7 @@ CREATE TABLE users (
     role          user_role    NOT NULL,
     warehouse_id  uuid,                              -- only used by warehouse staff
     contact_number varchar(20),                      -- phone number of drivers and staff
+    photo_data   text,
     is_active     boolean      NOT NULL DEFAULT true,
     created_at    timestamp    NOT NULL DEFAULT now(),
     CONSTRAINT chk_users_contact_number

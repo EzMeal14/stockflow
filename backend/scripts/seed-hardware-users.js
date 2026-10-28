@@ -46,7 +46,10 @@ async function main() {
   const warehouseIds = {};
   for (const s of STAFF) {
     if (warehouseIds[s.warehouse]) continue;
-    const w = await prisma.warehouses.findFirst({ where: { name: s.warehouse, is_active: true } });
+    const w = await prisma.warehouses.findFirst({
+      where: { name: s.warehouse, is_active: true },
+      select: { warehouse_id: true },
+    });
     if (!w) {
       throw new Error('Warehouse "' + s.warehouse + '" not found. Run database/09_hardware_sample_data.sql first.');
     }
@@ -71,6 +74,7 @@ async function main() {
       where: { email: p.email },
       update: { ...data, password_hash },
       create: { ...data, email: p.email, password_hash },
+      select: { user_id: true },
     });
     console.log('Ready:', p.email, '(' + p.role + ')');
   }

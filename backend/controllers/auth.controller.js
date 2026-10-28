@@ -21,6 +21,7 @@ exports.register = async (req, res) => {
     const password_hash = await bcrypt.hash(passwordString, 10);
     const user = await prisma.users.create({
       data: { firstname, lastname, email: normalizedEmail, password_hash, role: 'client' },
+      select: { user_id: true, email: true, role: true },
     });
     res.status(201).json({ user_id: user.user_id, email: user.email, role: user.role });
   } catch (err) {
@@ -49,7 +50,10 @@ exports.forgotPassword = async (req, res) => {
   try {
     const email = String(req.body.email || '').trim().toLowerCase();
     const genericMessage = 'If that email is registered, a verification code was sent.';
-    const user = await prisma.users.findFirst({ where: { email, is_active: true } });
+    const user = await prisma.users.findFirst({
+      where: { email, is_active: true },
+      select: { user_id: true },
+    });
     if (!user) return res.json({ message: genericMessage });
 
     const code = String(crypto.randomInt(100000, 1000000));
@@ -81,7 +85,7 @@ exports.resetPassword = async (req, res) => {
     const code_hash = crypto.createHash('sha256').update(code).digest('hex');
     const reset = await prisma.password_resets.findFirst({
       where: { code_hash, expires_at: { gt: new Date() }, users: { email, is_active: true } },
-      include: { users: true },
+      select: { reset_id: true, user_id: true },
     });
     if (!reset) return res.status(400).json({ error: 'Invalid or expired verification code' });
 
@@ -121,7 +125,10 @@ exports.updateProfile = async (req, res) => {
     if (changingPassword && (password.length < 8 || /\s/.test(password) || !currentPassword)) {
       return res.status(400).json({ error: 'Enter the current password and a new password of at least 8 characters without spaces' });
     }
-    const user = await prisma.users.findUnique({ where: { user_id: req.user.user_id } });
+    const user = await prisma.users.findUnique({
+      where: { user_id: req.user.user_id },
+      select: { user_id: true, password_hash: true },
+    });
     if (!user) return res.status(404).json({ error: 'Account not found' });
     if (changingPassword && !(await bcrypt.compare(currentPassword, user.password_hash))) {
       return res.status(401).json({ error: 'Current password is incorrect' });
@@ -130,7 +137,11 @@ exports.updateProfile = async (req, res) => {
     if (contact_number !== undefined) data.contact_number = contact_number || null;
     if (changingPassword) data.password_hash = await bcrypt.hash(password, 10);
     if (!Object.keys(data).length) return res.status(400).json({ error: 'Enter a change to save' });
-    await prisma.users.update({ where: { user_id: req.user.user_id }, data });
+    await prisma.users.update({
+      where: { user_id: req.user.user_id },
+      data,
+      select: { user_id: true },
+    });
     res.json({ message: changingPassword ? 'Password changed successfully.' : 'Contact number updated.' });
   } catch (err) { handleError(res, err); }
 };
@@ -142,13 +153,16 @@ exports.requestEmailChange = async (req, res) => {
     if (!email || email.length > 254 || /\s/.test(email)) {
       return res.status(400).json({ error: 'Enter a valid email address without spaces' });
     }
-    const user = await prisma.users.findUnique({ where: { user_id: req.user.user_id } });
+    const user = await prisma.users.findUnique({
+      where: { user_id: req.user.user_id },
+      select: { user_id: true, email: true, password_hash: true },
+    });
     if (!user) return res.status(404).json({ error: 'Account not found' });
     if (!(await bcrypt.compare(currentPassword, user.password_hash))) {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
     if (email === user.email) return res.status(400).json({ error: 'Enter a different email address' });
-    if (await prisma.users.findUnique({ where: { email } })) {
+    if (await prisma.users.findUnique({ where: { email }, select: { user_id: true } })) {
       return res.status(409).json({ error: 'That email is already registered' });
     }
     const code = String(crypto.randomInt(100000, 1000000));
@@ -179,11 +193,15 @@ exports.confirmEmailChange = async (req, res) => {
       where: { user_id: req.user.user_id, code_hash, pending_email: email, expires_at: { gt: new Date() } },
     });
     if (!reset) return res.status(400).json({ error: 'Invalid or expired verification code' });
-    if (await prisma.users.findUnique({ where: { email } })) {
+    if (await prisma.users.findUnique({ where: { email }, select: { user_id: true } })) {
       return res.status(409).json({ error: 'That email is already registered' });
     }
     await prisma.$transaction([
-      prisma.users.update({ where: { user_id: req.user.user_id }, data: { email } }),
+      prisma.users.update({
+        where: { user_id: req.user.user_id },
+        data: { email },
+        select: { user_id: true },
+      }),
       prisma.password_resets.deleteMany({ where: { user_id: req.user.user_id } }),
     ]);
     res.json({ message: 'Email changed and verified.', email });
@@ -196,7 +214,19 @@ exports.login = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({ error: 'email and password are required' });
     }
-    const user = await prisma.users.findUnique({ where: { email: email.toLowerCase() } });
+    const user = await prisma.users.findUnique({
+      where: { email: email.toLowerCase() },
+      select: {
+        user_id: true,
+        firstname: true,
+        lastname: true,
+        email: true,
+        password_hash: true,
+        role: true,
+        warehouse_id: true,
+        is_active: true,
+      },
+    });
     const ok = user && user.is_active && (await bcrypt.compare(password, user.password_hash));
     if (!ok) {
       return res.status(401).json({ error: 'Wrong email or password' });

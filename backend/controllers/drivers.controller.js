@@ -3,18 +3,38 @@ const prisma = require('../lib/prisma');
 const { handleError } = require('../lib/errors');
 const { withUser } = require('../lib/audit');
 const { cleanContactNumber, CONTACT_ERROR } = require('../lib/phone');
+const { validPhotoData, missingPhotoColumn } = require('../lib/photo');
 
 const OPEN_STATUSES = ['assigned', 'in_transit'];
-const PUBLIC_FIELDS = { user_id: true, firstname: true, lastname: true, email: true, contact_number: true };
+const PUBLIC_FIELDS = {
+  user_id: true,
+  firstname: true,
+  lastname: true,
+  email: true,
+  contact_number: true,
+  photo_data: true,
+};
+const PUBLIC_FIELDS_WITHOUT_PHOTO = { ...PUBLIC_FIELDS };
+delete PUBLIC_FIELDS_WITHOUT_PHOTO.photo_data;
 
 // Active drivers
 exports.list = async (req, res) => {
   try {
-    const rows = await prisma.users.findMany({
-      where: { role: 'driver', is_active: true },
-      select: PUBLIC_FIELDS,
-      orderBy: { firstname: 'asc' },
-    });
+    let rows;
+    try {
+      rows = await prisma.users.findMany({
+        where: { role: 'driver', is_active: true },
+        select: PUBLIC_FIELDS,
+        orderBy: { firstname: 'asc' },
+      });
+    } catch (err) {
+      if (!missingPhotoColumn(err)) throw err;
+      rows = await prisma.users.findMany({
+        where: { role: 'driver', is_active: true },
+        select: PUBLIC_FIELDS_WITHOUT_PHOTO,
+        orderBy: { firstname: 'asc' },
+      });
+    }
     res.json(rows);
   } catch (err) {
     handleError(res, err);
@@ -29,6 +49,7 @@ exports.create = async (req, res) => {
     const rawEmail = String(req.body.email || '');
     const email = rawEmail.trim().toLowerCase();
     const password = req.body.password;
+    const photo_data = req.body.photo_data;
     if (!firstname || !lastname || !email || typeof password !== 'string'
       || password.length < 8 || /\s/.test(rawEmail) || /\s/.test(password)) {
       return res.status(400).json({
@@ -39,13 +60,36 @@ exports.create = async (req, res) => {
     if (!contact_number) {
       return res.status(400).json({ error: CONTACT_ERROR });
     }
+    if (photo_data !== undefined && photo_data !== null && !validPhotoData(photo_data)) {
+      return res.status(400).json({ error: 'photo_data must be a JPEG image smaller than 1.5 MB' });
+    }
     const password_hash = await bcrypt.hash(password, 10);
-    const driver = await withUser(req.user.user_id, (tx) =>
-      tx.users.create({
-        data: { firstname, lastname, email, password_hash, contact_number, role: 'driver' },
-        select: PUBLIC_FIELDS,
-      })
-    );
+    const data = {
+      firstname,
+      lastname,
+      email,
+      password_hash,
+      contact_number,
+      role: 'driver',
+      ...(photo_data !== undefined ? { photo_data } : {}),
+    };
+    let driver;
+    try {
+      driver = await withUser(req.user.user_id, (tx) =>
+        tx.users.create({ data, select: PUBLIC_FIELDS })
+      );
+    } catch (err) {
+      if (!missingPhotoColumn(err)) throw err;
+      if (photo_data !== undefined && photo_data !== null) {
+        return res.status(503).json({ error: 'Photos are unavailable until the database migration is applied.' });
+      }
+      driver = await withUser(req.user.user_id, (tx) =>
+        tx.users.create({
+          data: { firstname, lastname, email, password_hash, contact_number, role: 'driver' },
+          select: PUBLIC_FIELDS_WITHOUT_PHOTO,
+        })
+      );
+    }
     res.status(201).json(driver);
   } catch (err) {
     if (err.code === 'P2002') {
@@ -60,6 +104,7 @@ exports.remove = async (req, res) => {
   try {
     const driver = await prisma.users.findFirst({
       where: { user_id: req.params.id, role: 'driver', is_active: true },
+      select: { user_id: true },
     });
     if (!driver) return res.status(404).json({ error: 'Driver not found' });
 
@@ -71,7 +116,11 @@ exports.remove = async (req, res) => {
     }
 
     await withUser(req.user.user_id, (tx) =>
-      tx.users.update({ where: { user_id: driver.user_id }, data: { is_active: false } })
+      tx.users.update({
+        where: { user_id: driver.user_id },
+        data: { is_active: false },
+        select: { user_id: true },
+      })
     );
     res.json({ user_id: driver.user_id, removed: true });
   } catch (err) {
