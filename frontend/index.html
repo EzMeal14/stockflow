@@ -53,15 +53,24 @@
     <details>
       <summary>New client? Create an account</summary>
       <form id="register-form">
-        <label>First name <input id="reg-first" required></label>
-        <label>Last name <input id="reg-last" required></label>
-        <label>Email <input type="email" id="reg-email" pattern="[^\s@]+@[^\s@]+\.[^\s@]+" title="Enter an email address without spaces" required></label>
-        <label>Password (8 or more characters)
-          <div class="password-field">
-            <input type="password" id="reg-password" minlength="8" pattern="[^\s]{8,}" title="Password must be at least 8 characters and cannot contain spaces" required autocomplete="new-password">
-          </div>
-        </label>
-        <button type="submit">Create account</button>
+        <div id="register-details">
+          <label>First name <input id="reg-first" required></label>
+          <label>Last name <input id="reg-last" required></label>
+          <label>Email <input type="email" id="reg-email" pattern="[^\s@]+@[^\s@]+\.[^\s@]+" title="Enter an email address without spaces" required></label>
+          <label>Password (8 or more characters)
+            <div class="password-field">
+              <input type="password" id="reg-password" minlength="8" pattern="[^\s]{8,}" title="Password must be at least 8 characters and cannot contain spaces" required autocomplete="new-password">
+            </div>
+          </label>
+          <button type="submit">Send verification code</button>
+        </div>
+        <div id="register-verification" hidden>
+          <label>Verification code
+            <input type="text" id="reg-code" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" required>
+          </label>
+          <button type="submit">Verify and create account</button>
+          <button type="button" id="change-register-email" class="link-button">Change email</button>
+        </div>
         <p id="register-message"></p>
       </form>
     </details>
