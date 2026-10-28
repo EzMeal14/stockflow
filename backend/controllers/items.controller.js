@@ -15,6 +15,28 @@ function validPrice(value) {
   return value !== undefined && value !== null && value !== '' && !Number.isNaN(Number(value)) && Number(value) >= 0;
 }
 
+function normalizeItemName(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+async function hasActiveItemName(name, excludeItemId) {
+  const normalizedName = normalizeItemName(name);
+  if (!normalizedName) return false;
+  const duplicates = excludeItemId
+    ? await prisma.$queryRaw`
+      SELECT item_id FROM items
+      WHERE is_active = TRUE
+        AND item_id <> ${excludeItemId}::uuid
+        AND regexp_replace(lower(btrim(name)), '[[:space:]]+', ' ', 'g') = ${normalizedName}
+      LIMIT 1`
+    : await prisma.$queryRaw`
+      SELECT item_id FROM items
+      WHERE is_active = TRUE
+        AND regexp_replace(lower(btrim(name)), '[[:space:]]+', ' ', 'g') = ${normalizedName}
+      LIMIT 1`;
+  return duplicates.length > 0;
+}
+
 function validImageData(value) {
   return typeof value === 'string'
     && Buffer.byteLength(value, 'utf8') <= 1500000
@@ -150,6 +172,9 @@ exports.create = async (req, res) => {
     if (!name || !validPrice(unit_price)) {
       return res.status(400).json({ error: 'name and a unit_price of 0 or more are required' });
     }
+    if (await hasActiveItemName(name)) {
+      return res.status(409).json({ error: 'Item already exists.' });
+    }
     if (image_data !== undefined && image_data !== null && !validImageData(image_data)) {
       return res.status(400).json({ error: 'image_data must be a JPEG image smaller than 1.5 MB' });
     }
@@ -180,6 +205,12 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { name, description, unit_price, image_data } = req.body;
+    if (typeof name === 'string' && !name.trim()) {
+      return res.status(400).json({ error: 'Item name is required' });
+    }
+    if (typeof name === 'string' && await hasActiveItemName(name, req.params.id)) {
+      return res.status(409).json({ error: 'Item already exists.' });
+    }
     const typed = req.body.id;
     if (typed !== undefined && typed !== null && String(typed).trim() !== '') {
       const parsed = parseItemId(typed);

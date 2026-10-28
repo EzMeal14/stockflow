@@ -165,6 +165,7 @@ function setupItemManager() {
   gridRoot.replaceChildren(listMessage, grid);
 
   let editingItem = null;
+  let activeItems = [];
   let selectedImageData = null;
   let removeExistingImage = false;
 
@@ -183,6 +184,12 @@ function setupItemManager() {
   function say(text, ok) {
     formMessage.textContent = text || '';
     formMessage.className = text ? (ok ? 'ok' : 'error') : '';
+  }
+
+  function hasDuplicateName(name) {
+    const normalized = name.trim().replace(/\s+/g, ' ').toLowerCase();
+    return activeItems.some((item) => item.item_id !== (editingItem && editingItem.item_id)
+      && item.name.trim().replace(/\s+/g, ' ').toLowerCase() === normalized);
   }
 
   function reset() {
@@ -223,6 +230,7 @@ function setupItemManager() {
 
   async function load() {
     const items = sortById(await api('/items/admin-catalog'), 'id');
+    activeItems = items;
     grid.replaceChildren();
     if (!items.length) {
       grid.append(el('div', { class: 'item-empty', text: 'No active items yet. Add your first item above.' }));
@@ -306,9 +314,21 @@ function setupItemManager() {
   });
 
   cancel.addEventListener('click', reset);
+  nameInput.addEventListener('input', () => {
+    if (nameInput.value.trim() && hasDuplicateName(nameInput.value)) {
+      say('Item already exists.', false);
+    } else {
+      say('', true);
+    }
+  });
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     say('', true);
+    if (hasDuplicateName(nameInput.value)) {
+      say('Item already exists.', false);
+      nameInput.focus();
+      return;
+    }
     const body = {
       id: idInput.value.trim(),
       name: nameInput.value.trim(),
