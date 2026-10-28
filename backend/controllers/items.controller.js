@@ -106,11 +106,22 @@ exports.clientCatalog = async (req, res) => {
 
 exports.listInactive = async (req, res) => {
   try {
-    const items = await prisma.items.findMany({
-      select: itemFields,
-      where: { is_active: false },
-      orderBy: { name: 'asc' },
-    });
+    let items;
+    try {
+      items = await prisma.items.findMany({
+        select: { ...itemFields, image_data: true },
+        where: { is_active: false },
+        orderBy: { name: 'asc' },
+      });
+    } catch (err) {
+      if (!missingImageColumn(err)) throw err;
+      console.warn('Database migration for item images is not applied; listing deactivated items without photos.');
+      items = await prisma.items.findMany({
+        select: itemFields,
+        where: { is_active: false },
+        orderBy: { name: 'asc' },
+      });
+    }
     res.json(await addTotalStock(items));
   } catch (err) {
     handleError(res, err);

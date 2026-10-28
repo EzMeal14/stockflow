@@ -108,6 +108,7 @@ function setupTabs() {
 
 function setupItemManager() {
   const root = document.getElementById('items-root');
+  const gridRoot = document.getElementById('items-grid-root');
   const idInput = el('input', { placeholder: 'Empty = next number', autocomplete: 'off' });
   const nameInput = el('input', { required: true, maxlength: '200', autocomplete: 'off' });
   const descriptionInput = el('textarea', { rows: '3', maxlength: '2000' });
@@ -144,7 +145,8 @@ function setupItemManager() {
     el('div', { class: 'item-form-actions' }, submit, cancel)
   );
   const listMessage = el('p');
-  root.replaceChildren(form, listMessage, grid);
+  root.replaceChildren(form);
+  gridRoot.replaceChildren(listMessage, grid);
 
   let editingItem = null;
   let selectedImageData = null;
@@ -211,30 +213,10 @@ function setupItemManager() {
       return;
     }
     items.forEach((item) => {
-      const media = item.image_data
-        ? el('img', { class: 'item-card-image', src: item.image_data, alt: item.name, loading: 'lazy' })
-        : el('div', { class: 'item-card-placeholder' },
-          el('span', { class: 'no-image-icon', 'aria-hidden': 'true' }),
-          el('strong', { text: 'No image' }),
-          el('span', { text: 'Edit item to attach an image' })
-        );
-      const card = el('article', { class: 'item-card' },
-        el('div', { class: 'item-card-media' }, media),
-        el('div', { class: 'item-card-content' },
-          el('span', { class: 'item-card-id', text: item.id }),
-          el('h3', { text: item.name }),
-          el('p', { class: 'item-card-description', text: item.description || 'No description provided.' }),
-          el('div', { class: 'item-card-meta' },
-            el('div', null, el('span', { text: 'Price' }), el('strong', { text: money(item.unit_price) })),
-            el('div', null, el('span', { text: 'Total stock' }), el('strong', { text: String(item.total_stock || 0) }))
-          ),
-          el('div', { class: 'item-card-actions' },
-            btn('Edit item', () => startEdit(item), 'secondary'),
-            btn('Deactivate', () => deactivate(item), 'secondary')
-          )
-        )
-      );
-      grid.append(card);
+      grid.append(renderItemTile(item, [
+        btn('Edit item', () => startEdit(item), 'secondary'),
+        btn('Deactivate', () => deactivate(item), 'secondary'),
+      ]));
     });
   }
 
@@ -343,20 +325,21 @@ function setupItemManager() {
 async function setupInactiveItems() {
   const root = document.getElementById('inactive-items-root');
   const message = document.getElementById('inactive-items-message');
-  const table = el('table');
-  root.replaceChildren(table);
+  const grid = el('div', { class: 'item-grid' });
+  root.replaceChildren(grid);
 
   async function load() {
     const rows = sortById(await api('/items/inactive'), 'id');
-    fillTable(table, [
-      { key: 'id', label: 'ID' },
-      { key: 'name', label: 'Name' },
-      { key: 'description', label: 'Description' },
-      { key: 'unit_price', label: 'Price', format: money },
-      { key: 'total_stock', label: 'Total stock' },
-    ], rows, (row) => [
-      btn('Restore', () => restore(row), 'secondary'),
-    ]);
+    grid.replaceChildren();
+    if (!rows.length) {
+      grid.append(el('div', { class: 'item-empty', text: 'No deactivated items.' }));
+      return;
+    }
+    rows.forEach((row) => {
+      grid.append(renderItemTile(row, [
+        btn('Restore item', () => restore(row)),
+      ], true));
+    });
   }
 
   async function restore(item) {
@@ -381,6 +364,32 @@ async function setupInactiveItems() {
     message.textContent = err.message;
     message.className = 'error';
   });
+}
+
+function renderItemTile(item, actions, inactive = false) {
+  const media = item.image_data
+    ? el('img', { class: 'item-card-image', src: item.image_data, alt: item.name, loading: 'lazy' })
+    : el('div', { class: 'item-card-placeholder' },
+      el('span', { class: 'no-image-icon', 'aria-hidden': 'true' }),
+      el('strong', { text: 'No image' }),
+      el('span', { text: inactive ? 'No image attached' : 'Edit item to attach an image' })
+    );
+  return el('article', { class: 'item-card' + (inactive ? ' item-card-inactive' : '') },
+    el('div', { class: 'item-card-media' }, media),
+    el('div', { class: 'item-card-content' },
+      el('div', { class: 'item-card-topline' },
+        el('span', { class: 'item-card-id', text: item.id }),
+        el('span', { class: 'item-card-state' + (inactive ? ' is-inactive' : ''), text: inactive ? 'Deactivated' : 'Active' })
+      ),
+      el('h3', { text: item.name }),
+      el('p', { class: 'item-card-description', text: item.description || 'No description provided.' }),
+      el('div', { class: 'item-card-meta' },
+        el('div', null, el('span', { text: 'Price' }), el('strong', { text: money(item.unit_price) })),
+        el('div', null, el('span', { text: 'Total stock' }), el('strong', { text: String(item.total_stock || 0) }))
+      ),
+      el('div', { class: 'item-card-actions' }, actions)
+    )
+  );
 }
 
 // One form and one table to add, edit and remove records.
