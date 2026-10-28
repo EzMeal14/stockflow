@@ -21,6 +21,22 @@ function validImageData(value) {
     && /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(value);
 }
 
+function missingImageColumn(err) {
+  const message = String(err.message).toLowerCase();
+  return (err.code === 'P2022' && message.includes('image_data'))
+    || (message.includes('image_data')
+      && (message.includes('unknown field') || message.includes('unknown arg') || message.includes('unknown argument')));
+}
+
+const itemFields = {
+  item_id: true,
+  id: true,
+  name: true,
+  description: true,
+  unit_price: true,
+  is_active: true,
+};
+
 async function addTotalStock(items) {
   const totals = await prisma.inventory.groupBy({
     by: ['item_id'],
@@ -36,13 +52,11 @@ async function addTotalStock(items) {
 exports.list = async (req, res) => {
   try {
     const items = await prisma.items.findMany({
+      select: itemFields,
       where: { is_active: true },
       orderBy: { name: 'asc' },
     });
-    res.json(items.map((item) => {
-      const { image_data, ...withoutImage } = item;
-      return forRole(req.user, withoutImage);
-    }));
+    res.json(items.map((item) => forRole(req.user, item)));
   } catch (err) {
     handleError(res, err);
   }
@@ -50,10 +64,22 @@ exports.list = async (req, res) => {
 
 exports.listAdmin = async (req, res) => {
   try {
-    const items = await prisma.items.findMany({
-      where: { is_active: true },
-      orderBy: { name: 'asc' },
-    });
+    let items;
+    try {
+      items = await prisma.items.findMany({
+        select: { ...itemFields, image_data: true },
+        where: { is_active: true },
+        orderBy: { name: 'asc' },
+      });
+    } catch (err) {
+      if (!missingImageColumn(err)) throw err;
+      console.warn('Database migration for item images is not applied; listing items without photos.');
+      items = await prisma.items.findMany({
+        select: itemFields,
+        where: { is_active: true },
+        orderBy: { name: 'asc' },
+      });
+    }
     res.json(await addTotalStock(items));
   } catch (err) {
     handleError(res, err);
@@ -81,10 +107,11 @@ exports.clientCatalog = async (req, res) => {
 exports.listInactive = async (req, res) => {
   try {
     const items = await prisma.items.findMany({
+      select: itemFields,
       where: { is_active: false },
       orderBy: { name: 'asc' },
     });
-    res.json(await addTotalStock(items.map(({ image_data, ...item }) => item)));
+    res.json(await addTotalStock(items));
   } catch (err) {
     handleError(res, err);
   }
@@ -92,10 +119,12 @@ exports.listInactive = async (req, res) => {
 
 exports.getOne = async (req, res) => {
   try {
-    const item = await prisma.items.findUnique({ where: { item_id: req.params.id } });
+    const item = await prisma.items.findUnique({
+      select: itemFields,
+      where: { item_id: req.params.id },
+    });
     if (!item) return res.status(404).json({ error: 'Not found' });
-    const { image_data, ...withoutImage } = item;
-    res.json(forRole(req.user, withoutImage));
+    res.json(forRole(req.user, item));
   } catch (err) {
     handleError(res, err);
   }
@@ -118,9 +147,14 @@ exports.create = async (req, res) => {
     for (let attempt = 0; attempt < 3; attempt++) {
       if (parsed.auto) id = await nextItemId(prisma);
       try {
-        const item = await prisma.items.create({ data: { id, name, description, unit_price, image_data: image_data || null } });
+        const data = { id, name, description, unit_price };
+        if (image_data) data.image_data = image_data;
+        const item = await prisma.items.create({ data, select: itemFields });
         return res.status(201).json(item);
       } catch (err) {
+        if (image_data && missingImageColumn(err)) {
+          return res.status(503).json({ error: 'Item images are unavailable until the database migration is applied.' });
+        }
         // Another admin took the same number a moment ago: try the next one
         if (err.code === 'P2002' && parsed.auto && attempt < 2) continue;
         throw err;
@@ -140,8 +174,8 @@ exports.update = async (req, res) => {
       const parsed = parseItemId(typed);
       if (parsed.error) return res.status(400).json({ error: parsed.error });
       const current = await prisma.items.findUnique({
-        where: { item_id: req.params.id },
         select: { id: true },
+        where: { item_id: req.params.id },
       });
       if (!current) return res.status(404).json({ error: 'Not found' });
       if (parsed.id !== current.id) {
@@ -157,9 +191,13 @@ exports.update = async (req, res) => {
     const item = await prisma.items.update({
       where: { item_id: req.params.id },
       data: { name, description, unit_price, ...(image_data !== undefined ? { image_data } : {}) },
+      select: itemFields,
     });
     res.json(item);
   } catch (err) {
+    if (req.body.image_data !== undefined && missingImageColumn(err)) {
+      return res.status(503).json({ error: 'Item images are unavailable until the database migration is applied.' });
+    }
     handleError(res, err);
   }
 };
@@ -170,6 +208,7 @@ exports.deactivate = async (req, res) => {
     const item = await prisma.items.update({
       where: { item_id: req.params.id },
       data: { is_active: false },
+      select: itemFields,
     });
     res.json(item);
   } catch (err) {
@@ -181,16 +220,23 @@ exports.restore = async (req, res) => {
   try {
     const item = await prisma.$transaction(async (tx) => {
       await tx.$executeRaw`LOCK TABLE public.items IN ACCESS EXCLUSIVE MODE`;
-      const current = await tx.items.findUnique({ where: { item_id: req.params.id } });
+      const current = await tx.items.findUnique({
+        select: { id: true, is_active: true },
+        where: { item_id: req.params.id },
+      });
       if (!current) return null;
       if (!current.is_active) {
         const id = current.id.startsWith('ARCHIVED-') ? await nextItemId(tx) : current.id;
         await tx.items.update({
           where: { item_id: req.params.id },
           data: { id, is_active: true },
+          select: itemFields,
         });
       }
-      return tx.items.findUnique({ where: { item_id: req.params.id } });
+      return tx.items.findUnique({
+        select: itemFields,
+        where: { item_id: req.params.id },
+      });
     });
     if (!item) return res.status(404).json({ error: 'Not found' });
     res.json(item);
@@ -202,7 +248,10 @@ exports.restore = async (req, res) => {
 exports.deleteInactive = async (req, res) => {
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const item = await tx.items.findUnique({ where: { item_id: req.params.id } });
+      const item = await tx.items.findUnique({
+        select: { is_active: true },
+        where: { item_id: req.params.id },
+      });
       if (!item) return { status: 404, error: 'Not found' };
       if (item.is_active) {
         return { status: 409, error: 'Only deactivated items can be permanently deleted' };
