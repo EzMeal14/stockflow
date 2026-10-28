@@ -31,7 +31,7 @@ exports.register = async (req, res) => {
 async function sendCode(email, code, subject, purpose) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error('Password reset email is not configured');
-  const from = process.env.RESEND_FROM || 'StockFlow <onboarding@resend.dev>';
+  const from = process.env.RESEND_FROM || 'BuildStock <onboarding@resend.dev>';
   const response = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -39,7 +39,7 @@ async function sendCode(email, code, subject, purpose) {
       from,
       to: [email],
       subject,
-      text: `Your StockFlow ${purpose} is ${code}. It expires in 10 minutes.`,
+      text: `Your BuildStock ${purpose} is ${code}. It expires in 10 minutes.`,
     }),
   });
   if (!response.ok) throw new Error('Could not send password reset email');
@@ -59,7 +59,7 @@ exports.forgotPassword = async (req, res) => {
       data: { user_id: user.user_id, code_hash, expires_at: new Date(Date.now() + 10 * 60 * 1000) },
     });
     try {
-      await sendCode(email, code, 'Your StockFlow password reset code', 'password reset code');
+      await sendCode(email, code, 'Your BuildStock password reset code', 'password reset code');
     } catch (err) {
       await prisma.password_resets.deleteMany({ where: { user_id: user.user_id } });
       throw err;
@@ -158,7 +158,7 @@ exports.requestEmailChange = async (req, res) => {
       data: { user_id: user.user_id, code_hash, pending_email: email, expires_at: new Date(Date.now() + 10 * 60 * 1000) },
     });
     try {
-      await sendCode(email, code, 'Verify your new StockFlow email', 'email verification code');
+      await sendCode(email, code, 'Verify your new BuildStock email', 'email verification code');
     } catch (err) {
       await prisma.password_resets.deleteMany({ where: { user_id: user.user_id } });
       throw err;

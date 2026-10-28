@@ -182,7 +182,12 @@ main.page, body.center > .card { animation: rise .5s cubic-bezier(.2,.7,.2,1) bo
 @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
 
 /* login */
-body.center { background: #eef3f5; }
+body.center { background-color: #e8ecef; background-image:
+  linear-gradient(rgba(18,28,46,.045) 1px, transparent 1px),
+  linear-gradient(90deg, rgba(18,28,46,.045) 1px, transparent 1px),
+  radial-gradient(circle at 14% 18%, rgba(184,125,46,.12), transparent 25%),
+  radial-gradient(circle at 88% 82%, rgba(14,111,104,.12), transparent 30%);
+  background-size: 32px 32px, 32px 32px, auto, auto; }
 body.center .card { box-shadow: 0 1px 0 rgba(255,255,255,.9) inset, 0 24px 60px rgba(18,28,46,.16); }
 body.center .lockup .mark { box-shadow: 0 6px 16px rgba(14,111,104,.4); }
 body.center .narrow.auth-shell {
@@ -213,11 +218,22 @@ body.center .narrow.auth-shell {
 .auth-story {
   position: relative; display: flex; flex-direction: column; justify-content: flex-end;
   min-height: 620px; padding: 42px; overflow: hidden;
-  background: linear-gradient(145deg, #093f3b 0%, #0e6f68 58%, #15958a 100%); color: #fff;
+  background:
+    linear-gradient(180deg, rgba(8,39,38,.08), rgba(8,39,38,.52)),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 1px, transparent 1px 58px),
+    linear-gradient(145deg, #093f3b 0%, #0e6f68 58%, #15958a 100%); color: #fff;
 }
 .auth-story::before { content: ""; position: absolute; width: 310px; height: 310px;
   right: -120px; top: -90px; border: 1px solid rgba(255,255,255,.16); border-radius: 50%;
   box-shadow: 0 0 0 46px rgba(255,255,255,.025), 0 0 0 92px rgba(255,255,255,.018); }
+.auth-story::after { content: ""; position: absolute; left: 38px; bottom: 178px;
+  width: 240px; height: 92px; opacity: .28; border: 2px solid #d7eee9; border-bottom-width: 12px;
+  background:
+    linear-gradient(90deg, transparent 0 18%, #d7eee9 18% 20%, transparent 20% 48%, #d7eee9 48% 50%, transparent 50%),
+    linear-gradient(180deg, #d7eee9 0 4px, transparent 4px 26px, rgba(215,238,233,.85) 26px 30px, transparent 30px 56px, rgba(215,238,233,.85) 56px 60px, transparent 60px);
+  box-shadow: 12px 0 0 -10px #d7eee9, 48px -14px 0 -12px #d7eee9, 96px -14px 0 -12px #d7eee9;
+  clip-path: polygon(0 22%, 100% 22%, 100% 100%, 0 100%);
+}
 .auth-story-glow { position: absolute; width: 260px; height: 260px; right: 10%; bottom: 22%;
   background: radial-gradient(circle, rgba(119,230,216,.28), transparent 68%); }
 .auth-eyebrow { position: relative; color: #9ee0d8; font-size: 11px; font-weight: 700; letter-spacing: .16em; }
