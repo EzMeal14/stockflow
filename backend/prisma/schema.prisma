@@ -46,6 +46,7 @@ model items {
   id          String        @unique @db.VarChar(100)
   name        String        @db.VarChar(200)
   description String?
+  image_data  String?       @db.Text
   unit_price  Decimal       @db.Decimal(12, 2)
   is_active   Boolean       @default(true)
   inventory   inventory[]

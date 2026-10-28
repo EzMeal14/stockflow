@@ -15,6 +15,12 @@ function validPrice(value) {
   return value !== undefined && value !== null && value !== '' && !Number.isNaN(Number(value)) && Number(value) >= 0;
 }
 
+function validImageData(value) {
+  return typeof value === 'string'
+    && Buffer.byteLength(value, 'utf8') <= 1500000
+    && /^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(value);
+}
+
 async function addTotalStock(items) {
   const totals = await prisma.inventory.groupBy({
     by: ['item_id'],
@@ -33,7 +39,10 @@ exports.list = async (req, res) => {
       where: { is_active: true },
       orderBy: { name: 'asc' },
     });
-    res.json(items.map((i) => forRole(req.user, i)));
+    res.json(items.map((item) => {
+      const { image_data, ...withoutImage } = item;
+      return forRole(req.user, withoutImage);
+    }));
   } catch (err) {
     handleError(res, err);
   }
@@ -75,7 +84,7 @@ exports.listInactive = async (req, res) => {
       where: { is_active: false },
       orderBy: { name: 'asc' },
     });
-    res.json(await addTotalStock(items));
+    res.json(await addTotalStock(items.map(({ image_data, ...item }) => item)));
   } catch (err) {
     handleError(res, err);
   }
@@ -85,7 +94,8 @@ exports.getOne = async (req, res) => {
   try {
     const item = await prisma.items.findUnique({ where: { item_id: req.params.id } });
     if (!item) return res.status(404).json({ error: 'Not found' });
-    res.json(forRole(req.user, item));
+    const { image_data, ...withoutImage } = item;
+    res.json(forRole(req.user, withoutImage));
   } catch (err) {
     handleError(res, err);
   }
@@ -94,18 +104,21 @@ exports.getOne = async (req, res) => {
 // The ID is optional. Empty = next number. "2" = ID-002. A full ID is kept as typed.
 exports.create = async (req, res) => {
   try {
-    const { name, description, unit_price } = req.body;
+    const { name, description, unit_price, image_data } = req.body;
     const parsed = parseItemId(req.body.id);
     if (parsed.error) return res.status(400).json({ error: parsed.error });
     if (!name || !validPrice(unit_price)) {
       return res.status(400).json({ error: 'name and a unit_price of 0 or more are required' });
+    }
+    if (image_data !== undefined && image_data !== null && !validImageData(image_data)) {
+      return res.status(400).json({ error: 'image_data must be a JPEG image smaller than 1.5 MB' });
     }
 
     let id = parsed.id;
     for (let attempt = 0; attempt < 3; attempt++) {
       if (parsed.auto) id = await nextItemId(prisma);
       try {
-        const item = await prisma.items.create({ data: { id, name, description, unit_price } });
+        const item = await prisma.items.create({ data: { id, name, description, unit_price, image_data: image_data || null } });
         return res.status(201).json(item);
       } catch (err) {
         // Another admin took the same number a moment ago: try the next one
@@ -121,7 +134,7 @@ exports.create = async (req, res) => {
 // An empty ID means "keep the current one".
 exports.update = async (req, res) => {
   try {
-    const { name, description, unit_price } = req.body;
+    const { name, description, unit_price, image_data } = req.body;
     const typed = req.body.id;
     if (typed !== undefined && typed !== null && String(typed).trim() !== '') {
       const parsed = parseItemId(typed);
@@ -138,9 +151,12 @@ exports.update = async (req, res) => {
     if (unit_price !== undefined && !validPrice(unit_price)) {
       return res.status(400).json({ error: 'unit_price must be 0 or more' });
     }
+    if (image_data !== undefined && image_data !== null && !validImageData(image_data)) {
+      return res.status(400).json({ error: 'image_data must be a JPEG image smaller than 1.5 MB' });
+    }
     const item = await prisma.items.update({
       where: { item_id: req.params.id },
-      data: { name, description, unit_price },
+      data: { name, description, unit_price, ...(image_data !== undefined ? { image_data } : {}) },
     });
     res.json(item);
   } catch (err) {

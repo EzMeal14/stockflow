@@ -15,7 +15,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
 
 app.use('/auth', require('./routes/auth.routes'));
 app.use('/items', require('./routes/items.routes'));
@@ -37,6 +37,9 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   if (err.type === 'entity.parse.failed') {
     return res.status(400).json({ error: 'Invalid JSON' });
+  }
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ error: 'Request is too large' });
   }
   console.error(err);
   res.status(500).json({ error: 'Server error' });

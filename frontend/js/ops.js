@@ -162,7 +162,10 @@ async function initOps(ctx) {
     fillShipResources();
   }
 
-  const refreshStock = () => Promise.all([loadStock(), loadLow(), loadMoves()]);
+  const refreshStock = async () => {
+    await Promise.all([loadStock(), loadLow(), loadMoves()]);
+    if (ctx.onStockChange) await ctx.onStockChange();
+  };
 
   async function refreshOrdersAndShips() {
     await Promise.all([loadOrders(), loadShips()]);
