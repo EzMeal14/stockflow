@@ -1,9 +1,9 @@
-# StockFlow
+# BuildStock
 
-**Multi-Branch Warehouse & Shipment Tracker**
+**Hardware & Construction Supplies Distributor**
 Course project for Advanced Database Systems.
 
-StockFlow keeps stock and deliveries correct across many warehouse branches. The database does the hard work: it blocks negative stock, logs every change, and the API only calls it.
+BuildStock supplies hardware stores and contractors across warehouse branches. Warehouses hold the stock and trucks deliver supplies to stores or job sites. The system keeps inventory and deliveries correct across every location. The database does the hard work: it blocks negative stock, logs every change, and the API only calls it.
 
 ## Tech Stack
 
