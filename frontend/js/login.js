@@ -11,15 +11,65 @@ if (getToken() && existing && DASHBOARDS[existing.role]) {
   window.location.href = DASHBOARDS[existing.role];
 }
 
-document.querySelectorAll('[data-password-toggle]').forEach((button) => {
-  button.addEventListener('click', () => {
-    const input = document.getElementById(button.getAttribute('aria-controls'));
-    const isVisible = input.type === 'text';
-    input.type = isVisible ? 'password' : 'text';
-    button.textContent = isVisible ? 'Show' : 'Hide';
-    button.setAttribute('aria-label', isVisible ? 'Show password' : 'Hide password');
-    button.setAttribute('aria-pressed', String(!isVisible));
-  });
+const loginForm = document.getElementById('login-form');
+const forgotPasswordPanel = document.getElementById('forgot-password-panel');
+const forgotPasswordForm = document.getElementById('forgot-password-form');
+const resetPasswordForm = document.getElementById('reset-password-form');
+let resetEmail = '';
+
+document.getElementById('forgot-password-button').addEventListener('click', () => {
+  loginForm.hidden = true;
+  forgotPasswordPanel.hidden = false;
+  forgotPasswordForm.hidden = false;
+  resetPasswordForm.hidden = true;
+  setMessage('reset-message', '', true);
+  document.getElementById('reset-email').focus();
+});
+
+document.getElementById('cancel-reset-button').addEventListener('click', () => {
+  forgotPasswordPanel.hidden = true;
+  loginForm.hidden = false;
+  forgotPasswordForm.reset();
+  resetPasswordForm.reset();
+  setMessage('reset-message', '', true);
+});
+
+forgotPasswordForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  resetEmail = document.getElementById('reset-email').value.trim();
+  setMessage('reset-message', '', true);
+  try {
+    await api('/auth/forgot-password', { method: 'POST', body: { email: resetEmail } });
+    forgotPasswordForm.hidden = true;
+    resetPasswordForm.hidden = false;
+    setMessage('reset-message', 'Enter the 6-digit code sent to your email.', true);
+    document.getElementById('reset-code').focus();
+  } catch (err) {
+    setMessage('reset-message', err.message, false);
+  }
+});
+
+resetPasswordForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  setMessage('reset-message', '', true);
+  try {
+    const data = await api('/auth/reset-password', {
+      method: 'POST',
+      body: {
+        email: resetEmail,
+        code: document.getElementById('reset-code').value,
+        password: document.getElementById('reset-password').value,
+      },
+    });
+    forgotPasswordPanel.hidden = true;
+    loginForm.hidden = false;
+    loginForm.reset();
+    forgotPasswordForm.reset();
+    resetPasswordForm.reset();
+    setMessage('login-message', data.message, true);
+  } catch (err) {
+    setMessage('reset-message', err.message, false);
+  }
 });
 
 document.getElementById('login-form').addEventListener('submit', async (e) => {

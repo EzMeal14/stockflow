@@ -74,9 +74,9 @@ if (user) {
     fields: [
       { key: 'firstname', label: 'First name', required: true },
       { key: 'lastname', label: 'Last name', required: true },
-      { key: 'email', label: 'Email', type: 'email', required: true, autocomplete: 'off' },
+      { key: 'email', label: 'Email', type: 'email', required: true, pattern: '[^\\s@]+@[^\\s@]+\\.[^\\s@]+', title: 'Enter an email address without spaces', autocomplete: 'off' },
       { key: 'contact_number', label: 'Contact number', type: 'tel', required: true, placeholder: '09171234567', pattern: '\\+?[0-9 ]{7,20}', title: 'Digits only, for example 09171234567', autocomplete: 'off' },
-      { key: 'password', label: 'Password (8 or more characters)', type: 'password', required: true, minlength: 8, autocomplete: 'new-password' },
+      { key: 'password', label: 'Password (8 or more characters)', type: 'password', required: true, minlength: 8, pattern: '[^\\s]{8,}', title: 'Password must be at least 8 characters and cannot contain spaces', autocomplete: 'new-password' },
     ],
     columns: [
       { key: 'firstname', label: 'First name' },
@@ -98,9 +98,9 @@ if (user) {
     fields: [
       { key: 'firstname', label: 'First name', required: true },
       { key: 'lastname', label: 'Last name', required: true },
-      { key: 'email', label: 'Email', type: 'email', required: true, autocomplete: 'off' },
+      { key: 'email', label: 'Email', type: 'email', required: true, pattern: '[^\\s@]+@[^\\s@]+\\.[^\\s@]+', title: 'Enter an email address without spaces', autocomplete: 'off' },
       { key: 'contact_number', label: 'Contact number', type: 'tel', required: true, placeholder: '09171234567', pattern: '\\+?[0-9 ]{7,20}', title: 'Digits only, for example 09171234567', autocomplete: 'off' },
-      { key: 'password', label: 'Password (8 or more characters)', type: 'password', required: true, minlength: 8, autocomplete: 'new-password' },
+      { key: 'password', label: 'Password (8 or more characters)', type: 'password', required: true, minlength: 8, pattern: '[^\\s]{8,}', title: 'Password must be at least 8 characters and cannot contain spaces', autocomplete: 'new-password' },
       { key: 'warehouse_id', label: 'Warehouse', type: 'select', required: true,
         optionsPath: '/lookups/warehouses', optionValue: 'warehouse_id',
         optionLabel: (w) => w.name + ' (' + w.city + ')' },

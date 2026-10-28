@@ -26,11 +26,13 @@ exports.create = async (req, res) => {
   try {
     const firstname = String(req.body.firstname || '').trim();
     const lastname = String(req.body.lastname || '').trim();
-    const email = String(req.body.email || '').trim().toLowerCase();
+    const rawEmail = String(req.body.email || '');
+    const email = rawEmail.trim().toLowerCase();
     const password = req.body.password;
-    if (!firstname || !lastname || !email || typeof password !== 'string' || password.length < 8) {
+    if (!firstname || !lastname || !email || typeof password !== 'string'
+      || password.length < 8 || /\s/.test(rawEmail) || /\s/.test(password)) {
       return res.status(400).json({
-        error: 'firstname, lastname, email and a password of 8 or more characters are required',
+        error: 'Email and password cannot contain spaces, and the password must have 8 or more characters',
       });
     }
     const contact_number = cleanContactNumber(req.body.contact_number);
