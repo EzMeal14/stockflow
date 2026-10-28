@@ -68,9 +68,26 @@ exports.create = async (req, res) => {
     if (!vehicle || !vehicle.is_active) {
       return res.status(400).json({ error: 'vehicle_id must be an active vehicle' });
     }
-    const shipment = await withUser(req.user.user_id, (tx) =>
-      tx.shipments.create({ data: { order_id, driver_id, vehicle_id } })
-    );
+    const shipment = await withUser(req.user.user_id, async (tx) => {
+      const busyFilter = { status: { in: ['assigned', 'in_transit'] } };
+      const [activeDriver, activeVehicle] = await Promise.all([
+        tx.shipments.findFirst({ where: { driver_id, ...busyFilter } }),
+        tx.shipments.findFirst({ where: { vehicle_id, ...busyFilter } }),
+      ]);
+      if (activeDriver) {
+        const error = new Error('This driver already has an active shipment');
+        error.code = 'P2010';
+        error.meta = { code: 'P0001', message: error.message };
+        throw error;
+      }
+      if (activeVehicle) {
+        const error = new Error('This vehicle is already assigned to an active shipment');
+        error.code = 'P2010';
+        error.meta = { code: 'P0001', message: error.message };
+        throw error;
+      }
+      return tx.shipments.create({ data: { order_id, driver_id, vehicle_id } });
+    });
     res.status(201).json(shipment);
   } catch (err) {
     handleError(res, err);
