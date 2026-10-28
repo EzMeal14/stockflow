@@ -28,7 +28,7 @@ exports.register = async (req, res) => {
   }
 };
 
-async function sendResetCode(email, code) {
+async function sendCode(email, code, subject, purpose) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) throw new Error('Password reset email is not configured');
   const from = process.env.RESEND_FROM || 'StockFlow <onboarding@resend.dev>';
@@ -38,8 +38,8 @@ async function sendResetCode(email, code) {
     body: JSON.stringify({
       from,
       to: [email],
-      subject: 'Your StockFlow password reset code',
-      text: `Your StockFlow password reset code is ${code}. It expires in 10 minutes.`,
+      subject,
+      text: `Your StockFlow ${purpose} is ${code}. It expires in 10 minutes.`,
     }),
   });
   if (!response.ok) throw new Error('Could not send password reset email');
@@ -59,7 +59,7 @@ exports.forgotPassword = async (req, res) => {
       data: { user_id: user.user_id, code_hash, expires_at: new Date(Date.now() + 10 * 60 * 1000) },
     });
     try {
-      await sendResetCode(email, code);
+      await sendCode(email, code, 'Your StockFlow password reset code', 'password reset code');
     } catch (err) {
       await prisma.password_resets.deleteMany({ where: { user_id: user.user_id } });
       throw err;
@@ -96,6 +96,98 @@ exports.resetPassword = async (req, res) => {
   } catch (err) {
     handleError(res, err);
   }
+};
+
+exports.me = async (req, res) => {
+  try {
+    const user = await prisma.users.findUnique({
+      where: { user_id: req.user.user_id },
+      select: { email: true, role: true, contact_number: true },
+    });
+    if (!user) return res.status(404).json({ error: 'Account not found' });
+    res.json(user);
+  } catch (err) { handleError(res, err); }
+};
+
+exports.updateProfile = async (req, res) => {
+  try {
+    const contact_number = typeof req.body.contact_number === 'string' ? req.body.contact_number.trim() : undefined;
+    const currentPassword = typeof req.body.current_password === 'string' ? req.body.current_password : '';
+    const password = typeof req.body.password === 'string' ? req.body.password : '';
+    if (contact_number !== undefined && contact_number.length > 20) {
+      return res.status(400).json({ error: 'Contact number must be 20 characters or fewer' });
+    }
+    const changingPassword = Boolean(password);
+    if (changingPassword && (password.length < 8 || /\s/.test(password) || !currentPassword)) {
+      return res.status(400).json({ error: 'Enter the current password and a new password of at least 8 characters without spaces' });
+    }
+    const user = await prisma.users.findUnique({ where: { user_id: req.user.user_id } });
+    if (!user) return res.status(404).json({ error: 'Account not found' });
+    if (changingPassword && !(await bcrypt.compare(currentPassword, user.password_hash))) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+    const data = {};
+    if (contact_number !== undefined) data.contact_number = contact_number || null;
+    if (changingPassword) data.password_hash = await bcrypt.hash(password, 10);
+    if (!Object.keys(data).length) return res.status(400).json({ error: 'Enter a change to save' });
+    await prisma.users.update({ where: { user_id: req.user.user_id }, data });
+    res.json({ message: changingPassword ? 'Password changed successfully.' : 'Contact number updated.' });
+  } catch (err) { handleError(res, err); }
+};
+
+exports.requestEmailChange = async (req, res) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const currentPassword = String(req.body.current_password || '');
+    if (!email || email.length > 254 || /\s/.test(email)) {
+      return res.status(400).json({ error: 'Enter a valid email address without spaces' });
+    }
+    const user = await prisma.users.findUnique({ where: { user_id: req.user.user_id } });
+    if (!user) return res.status(404).json({ error: 'Account not found' });
+    if (!(await bcrypt.compare(currentPassword, user.password_hash))) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
+    if (email === user.email) return res.status(400).json({ error: 'Enter a different email address' });
+    if (await prisma.users.findUnique({ where: { email } })) {
+      return res.status(409).json({ error: 'That email is already registered' });
+    }
+    const code = String(crypto.randomInt(100000, 1000000));
+    const code_hash = crypto.createHash('sha256').update(code).digest('hex');
+    await prisma.password_resets.deleteMany({ where: { user_id: user.user_id } });
+    await prisma.password_resets.create({
+      data: { user_id: user.user_id, code_hash, pending_email: email, expires_at: new Date(Date.now() + 10 * 60 * 1000) },
+    });
+    try {
+      await sendCode(email, code, 'Verify your new StockFlow email', 'email verification code');
+    } catch (err) {
+      await prisma.password_resets.deleteMany({ where: { user_id: user.user_id } });
+      throw err;
+    }
+    res.json({ message: 'Verification code sent.' });
+  } catch (err) { handleError(res, err); }
+};
+
+exports.confirmEmailChange = async (req, res) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const code = String(req.body.code || '');
+    if (!email || !/^\d{6}$/.test(code)) {
+      return res.status(400).json({ error: 'Enter the email and its 6-digit verification code' });
+    }
+    const code_hash = crypto.createHash('sha256').update(code).digest('hex');
+    const reset = await prisma.password_resets.findFirst({
+      where: { user_id: req.user.user_id, code_hash, pending_email: email, expires_at: { gt: new Date() } },
+    });
+    if (!reset) return res.status(400).json({ error: 'Invalid or expired verification code' });
+    if (await prisma.users.findUnique({ where: { email } })) {
+      return res.status(409).json({ error: 'That email is already registered' });
+    }
+    await prisma.$transaction([
+      prisma.users.update({ where: { user_id: req.user.user_id }, data: { email } }),
+      prisma.password_resets.deleteMany({ where: { user_id: req.user.user_id } }),
+    ]);
+    res.json({ message: 'Email changed and verified.', email });
+  } catch (err) { handleError(res, err); }
 };
 
 exports.login = async (req, res) => {
