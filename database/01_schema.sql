@@ -46,6 +46,7 @@ CREATE TABLE items (
     id          varchar(100)  NOT NULL UNIQUE,
     name        varchar(200)  NOT NULL,
     description text,
+    image_data  text,
     unit_price  numeric(12,2) NOT NULL CHECK (unit_price >= 0),
     is_active   boolean       NOT NULL DEFAULT true
 );
