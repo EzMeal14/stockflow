@@ -18,6 +18,9 @@ if (user) {
 
   setupCrud({
     root: 'warehouses-root', path: '/warehouses', idKey: 'warehouse_id',
+    tileLayout: true, entityName: 'warehouse', tileType: 'Warehouse', tilePlural: 'Warehouses', tileMark: 'WH',
+    tileTitle: (row) => row.name,
+    tileDetails: [{ key: 'address', label: 'Address' }, { key: 'city', label: 'City' }],
     fields: [
       { key: 'name', label: 'Name', required: true },
       { key: 'address', label: 'Address', required: true },
@@ -32,6 +35,9 @@ if (user) {
 
   setupCrud({
     root: 'vehicles-root', path: '/vehicles', idKey: 'vehicle_id',
+    tileLayout: true, entityName: 'vehicle', tileType: 'Vehicle', tilePlural: 'Vehicles', tileMark: 'VH',
+    tileTitle: (row) => row.plate,
+    tileDetails: [{ key: 'type', label: 'Type' }],
     fields: [
       { key: 'plate', label: 'Plate', required: true },
       { key: 'type', label: 'Type', required: true },
@@ -45,6 +51,9 @@ if (user) {
   // Driver accounts: add a driver, or remove one (the account is switched off, not deleted)
   setupCrud({
     root: 'drivers-root', path: '/drivers', idKey: 'user_id',
+    tileLayout: true, entityName: 'driver', tileType: 'Driver', tilePlural: 'Drivers', tileMark: 'DR',
+    tileTitle: (row) => row.firstname + ' ' + row.lastname,
+    tileDetails: [{ key: 'email', label: 'Email' }, { key: 'contact_number', label: 'Contact' }],
     canEdit: false,
     removeLabel: 'Remove',
     confirmText: 'Remove this driver? The account is switched off. Past shipments stay in the history.',
@@ -69,6 +78,13 @@ if (user) {
   // Staff accounts: add a staff member (with a warehouse), or remove one (the account is switched off, not deleted)
   staffCrud = setupCrud({
     root: 'staff-root', path: '/staff', idKey: 'user_id',
+    tileLayout: true, entityName: 'staff member', tileType: 'Staff', tilePlural: 'Staff', tileMark: 'ST',
+    tileTitle: (row) => row.firstname + ' ' + row.lastname,
+    tileDetails: [
+      { key: 'email', label: 'Email' },
+      { key: 'contact_number', label: 'Contact' },
+      { key: 'warehouse_name', label: 'Warehouse' },
+    ],
     canEdit: false,
     removeLabel: 'Remove',
     confirmText: 'Remove this staff member? The account is switched off. Past records stay in the history.',
@@ -392,6 +408,28 @@ function renderItemTile(item, actions, inactive = false) {
   );
 }
 
+function renderRecordTile(row, cfg, actions) {
+  const details = cfg.tileDetails.map((field) => {
+    const raw = row[field.key];
+    const value = raw === null || raw === undefined || raw === '' ? 'Not provided' : String(raw);
+    return el('div', { class: 'record-detail' },
+      el('span', { text: field.label }),
+      el('strong', { text: value })
+    );
+  });
+  return el('article', { class: 'item-card record-card' },
+    el('div', { class: 'item-card-media record-card-media' },
+      el('span', { class: 'record-tile-icon', text: cfg.tileMark }),
+      el('span', { class: 'record-tile-label', text: cfg.tileType })
+    ),
+    el('div', { class: 'item-card-content' },
+      el('h3', { class: 'record-card-title', text: cfg.tileTitle(row) }),
+      el('div', { class: 'record-card-details' }, details),
+      el('div', { class: 'item-card-actions' }, actions)
+    )
+  );
+}
+
 // One form and one table to add, edit and remove records.
 // The API never deletes rows. "Deactivate" and "Remove" only turn a record off.
 // Options: hint, describe(saved), canEdit (default true), removeLabel, confirmText, removedMessage.
@@ -403,13 +441,24 @@ function setupCrud(cfg) {
   const inputs = {};
   const selects = [];
   let editingId = null;
+  const isTileLayout = cfg.tileLayout === true;
 
   const msg = el('p');
   const say = (text, ok) => { msg.textContent = text || ''; msg.className = text ? (ok ? 'ok' : 'error') : ''; };
 
-  const submit = el('button', { type: 'submit', text: 'Add' });
+  const submit = el('button', { type: 'submit', text: isTileLayout ? 'Add ' + cfg.entityName : 'Add' });
   const cancel = el('button', { type: 'button', class: 'secondary', hidden: true, text: 'Cancel', onclick: reset });
-  const form = el('form', { class: 'row' });
+  const form = el('form', { class: isTileLayout ? 'record-form' : 'row' });
+  const fieldContainer = isTileLayout ? el('div', { class: 'record-form-fields' }) : form;
+  if (isTileLayout) {
+    form.append(el('div', { class: 'record-form-heading' },
+      el('div', null,
+        el('p', { class: 'eyebrow', text: 'Manage directory' }),
+        el('h3', { text: 'Add a ' + cfg.entityName })
+      ),
+      el('span', { class: 'record-form-mark', text: cfg.tileMark })
+    ));
+  }
   cfg.fields.forEach((f) => {
     let input;
     if (f.type === 'select') {
@@ -427,14 +476,32 @@ function setupCrud(cfg) {
     }
     if (f.required) input.required = true;
     inputs[f.key] = input;
-    form.append(el('label', null, f.label, input));
+    fieldContainer.append(el('label', null, f.label, input));
   });
-  form.append(submit);
-  if (canEdit) form.append(cancel);
+  if (isTileLayout) {
+    form.append(fieldContainer);
+    form.append(el('div', { class: 'record-form-actions' }, submit, canEdit ? cancel : null));
+  } else {
+    form.append(submit);
+    if (canEdit) form.append(cancel);
+  }
 
-  const hint = cfg.hint ? el('p', { class: 'muted', text: cfg.hint }) : null;
-  const table = el('table');
-  root.replaceChildren(...[form, hint, msg, table].filter(Boolean));
+  const hint = cfg.hint ? el('p', { class: 'muted record-form-hint', text: cfg.hint }) : null;
+  const table = isTileLayout ? null : el('table');
+  const tileGrid = isTileLayout ? el('div', { class: 'item-grid record-grid' }) : null;
+  const listing = isTileLayout
+    ? el('section', { class: 'record-listing' },
+      el('div', { class: 'record-listing-heading' },
+        el('div', null,
+          el('p', { class: 'eyebrow', text: 'Directory' }),
+          el('h3', { text: cfg.tilePlural })
+        ),
+        el('span', { class: 'record-count', text: 'Loading...' })
+      ),
+      tileGrid
+    )
+    : table;
+  root.replaceChildren(...[form, hint, msg, listing].filter(Boolean));
 
   function reset() {
     editingId = null;
@@ -442,8 +509,9 @@ function setupCrud(cfg) {
     cfg.fields.forEach((f) => {
       if (f.immutableOnEdit) inputs[f.key].disabled = false;
     });
-    submit.textContent = 'Add';
+    submit.textContent = isTileLayout ? 'Add ' + cfg.entityName : 'Add';
     cancel.hidden = true;
+    if (isTileLayout) form.querySelector('.record-form-heading h3').textContent = 'Add a ' + cfg.entityName;
   }
 
   function startEdit(row) {
@@ -454,6 +522,10 @@ function setupCrud(cfg) {
     });
     submit.textContent = 'Save changes';
     cancel.hidden = false;
+    if (isTileLayout) {
+      form.querySelector('.record-form-heading h3').textContent = 'Edit ' + cfg.entityName;
+      form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
     say('', true);
   }
 
@@ -468,10 +540,26 @@ function setupCrud(cfg) {
   async function load() {
     const rows = await api(cfg.listPath || cfg.path);
     const sortedRows = cfg.columns.some((c) => c.key === 'id') ? sortById(rows, 'id') : rows;
-    fillTable(table, cfg.columns, sortedRows, (row) => [
-      canEdit ? btn('Edit', () => startEdit(row)) : null,
-      btn(cfg.removeLabel || 'Deactivate', () => remove(row), 'secondary'),
-    ].filter(Boolean));
+    if (isTileLayout) {
+      tileGrid.replaceChildren();
+      listing.querySelector('.record-count').textContent = String(sortedRows.length) + (sortedRows.length === 1 ? ' record' : ' records');
+      if (!sortedRows.length) {
+        tileGrid.append(el('div', { class: 'item-empty', text: 'No ' + cfg.tileType.toLowerCase() + ' records yet.' }));
+        return;
+      }
+      sortedRows.forEach((row) => {
+        const actions = [
+          canEdit ? btn('Edit', () => startEdit(row), 'secondary') : null,
+          btn(cfg.removeLabel || 'Deactivate', () => remove(row), 'secondary'),
+        ].filter(Boolean);
+        tileGrid.append(renderRecordTile(row, cfg, actions));
+      });
+    } else {
+      fillTable(table, cfg.columns, sortedRows, (row) => [
+        canEdit ? btn('Edit', () => startEdit(row)) : null,
+        btn(cfg.removeLabel || 'Deactivate', () => remove(row), 'secondary'),
+      ].filter(Boolean));
+    }
   }
 
   async function remove(row) {
@@ -510,7 +598,10 @@ function setupCrud(cfg) {
     }
   });
 
-  load().catch((err) => say(err.message, false));
+  load().catch((err) => {
+    say(err.message, false);
+    if (isTileLayout) listing.querySelector('.record-count').textContent = 'Unavailable';
+  });
   loadSelects().catch((err) => say(err.message, false));
   return {
     reload: () => Promise.all([load(), loadSelects()]).catch((err) => say(err.message, false)),
