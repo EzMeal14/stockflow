@@ -355,10 +355,21 @@ nav.tabs button { font-weight: 700; }
 .item-search-input { width: 100%; height: 42px; padding: 0 12px; border: 1px solid #cbd5cc; border-radius: 10px; color: var(--ink); background: rgba(255,255,255,.9); font: inherit; }
 .item-search-input:focus { outline: 0; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(40,114,82,.18); }
 .item-search-status { margin: 0 0 10px; font-size: 12px; }
+.client-item-search { display: grid; grid-template-columns: minmax(0, 440px) 1fr; align-items: end; gap: 6px 12px; }
+.client-item-search label { margin: 0; color: #35463e; font-size: 13px; font-weight: 700; }
+.client-item-search .item-search-input { grid-column: 1; }
+.client-item-search .item-search-status { grid-column: 2; grid-row: 2; }
+.client-item-grid { margin-top: 12px; }
+.client-item-card .item-card-content h3 { margin-top: 10px; }
+.client-item-quantity { display: grid; gap: 2px; margin: auto 0 0; padding-top: 14px; color: #35463e; font-size: 12px; font-weight: 700; }
+.client-item-quantity input { width: 120px; margin-top: 4px; }
+.client-item-card .item-card-meta { grid-template-columns: 1fr 1fr; }
 
 @media (max-width: 640px) {
   .section-heading, .item-form-heading { align-items: flex-start; flex-direction: column; }
   .item-search { align-items: stretch; flex-direction: column; gap: 4px; }
+  .client-item-search { grid-template-columns: 1fr; }
+  .client-item-search .item-search-status { grid-column: 1; grid-row: auto; margin: 0; }
   .section-heading > p { text-align: left; }
   .item-form { padding: 16px; }
   .item-form-grid, .item-core-fields { grid-template-columns: 1fr; }

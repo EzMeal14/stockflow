@@ -110,16 +110,27 @@ exports.listAdmin = async (req, res) => {
 
 exports.clientCatalog = async (req, res) => {
   try {
-    const items = await prisma.items.findMany({
-      select: {
-        item_id: true,
-        id: true,
-        name: true,
-        unit_price: true,
-        is_active: true,
-      },
-      orderBy: { name: 'asc' },
-    });
+    const fields = {
+      item_id: true,
+      id: true,
+      name: true,
+      description: true,
+      unit_price: true,
+      is_active: true,
+      image_data: true,
+    };
+    let items;
+    try {
+      items = await prisma.items.findMany({ select: fields, orderBy: { name: 'asc' } });
+    } catch (err) {
+      if (!missingImageColumn(err)) throw err;
+      console.warn('Database migration for item images is not applied; listing catalog items without photos.');
+      const { image_data, ...fieldsWithoutImage } = fields;
+      items = await prisma.items.findMany({
+        select: fieldsWithoutImage,
+        orderBy: { name: 'asc' },
+      });
+    }
     res.json(items);
   } catch (err) {
     handleError(res, err);
