@@ -50,6 +50,7 @@ A branch where stock is kept.
 | name | varchar(200) | | NN | | Warehouse name |
 | address | text | | NN | | Street address |
 | city | varchar(120) | | NN | | City |
+| photo_data | text | | Yes | | Optional compressed JPEG photo |
 | is_active | boolean | | NN | true | false = closed (soft delete) |
 
 ### 3.2 users
@@ -66,6 +67,7 @@ Every person in the system. The `role` decides which dashboard and data they get
 | role | user_role | | NN | | admin, staff, driver, or client |
 | warehouse_id | uuid | FK | Yes | | Assigned warehouse (used by staff only) |
 | contact_number | varchar(20) | | Yes | | Phone number of drivers and staff. Digits only, with an optional + at the start (7 to 15 digits) |
+| photo_data | text | | Yes | | Optional compressed JPEG photo |
 | is_active | boolean | | NN | true | false = account disabled |
 | created_at | timestamp | | NN | now() | When the account was made |
 

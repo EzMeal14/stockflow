@@ -1,0 +1,5 @@
+ALTER TABLE "warehouses"
+ADD COLUMN IF NOT EXISTS "photo_data" TEXT;
+
+ALTER TABLE "users"
+ADD COLUMN IF NOT EXISTS "photo_data" TEXT;

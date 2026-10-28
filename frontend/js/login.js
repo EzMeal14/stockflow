@@ -15,7 +15,16 @@ const loginForm = document.getElementById('login-form');
 const forgotPasswordPanel = document.getElementById('forgot-password-panel');
 const forgotPasswordForm = document.getElementById('forgot-password-form');
 const resetPasswordForm = document.getElementById('reset-password-form');
+const passwordInput = document.getElementById('password');
+const passwordToggle = document.querySelector('.password-toggle');
 let resetEmail = '';
+
+passwordToggle.addEventListener('click', () => {
+  const isVisible = passwordInput.type === 'text';
+  passwordInput.type = isVisible ? 'password' : 'text';
+  passwordToggle.setAttribute('aria-pressed', String(!isVisible));
+  passwordToggle.setAttribute('aria-label', isVisible ? 'Show password' : 'Hide password');
+});
 
 document.getElementById('forgot-password-button').addEventListener('click', () => {
   loginForm.hidden = true;

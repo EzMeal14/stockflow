@@ -3,10 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <title>BuildStock - Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -35,12 +36,33 @@
 
     <div data-panel="items">
       <section class="card">
-        <h2>Items</h2>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Catalog management</p>
+            <h2>Add an item</h2>
+          </div>
+          <p class="muted">Create the item here. Add warehouse quantities separately from the Stock section.</p>
+        </div>
         <div id="items-root"></div>
       </section>
       <section class="card">
-        <h2>Deactivated items</h2>
-        <p class="muted">Restore an item to make it available again. Its ID stays fixed and items are sorted by ID. Items linked to stock or order history cannot be permanently deleted.</p>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Active catalog</p>
+            <h2>Items</h2>
+          </div>
+          <p class="muted">Active products, their price, image, and total stock across warehouses.</p>
+        </div>
+        <div id="items-grid-root"></div>
+      </section>
+      <section class="card inactive-items-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Archived catalog</p>
+            <h2>Deactivated items</h2>
+          </div>
+          <p class="muted">Restore an item to make it available again. Its ID and history stay preserved.</p>
+        </div>
         <p id="inactive-items-message"></p>
         <div id="inactive-items-root"></div>
       </section>

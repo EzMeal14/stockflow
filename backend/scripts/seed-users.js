@@ -22,6 +22,7 @@ async function main() {
       where: { email: u.email },
       update: { password_hash },
       create: { ...u, password_hash },
+      select: { user_id: true },
     });
     console.log('Ready:', u.email, `(${u.role})`);
   }

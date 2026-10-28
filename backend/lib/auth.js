@@ -14,7 +14,10 @@ async function authenticate(req, res, next) {
       return res.status(401).json({ error: 'Login required' });
     }
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await prisma.users.findUnique({ where: { user_id: payload.sub } });
+    const user = await prisma.users.findUnique({
+      where: { user_id: payload.sub },
+      select: { user_id: true, role: true, warehouse_id: true, is_active: true },
+    });
     if (!user || !user.is_active) {
       return res.status(401).json({ error: 'Account not found or disabled' });
     }

@@ -22,6 +22,13 @@
           <label>Password
             <div class="password-field">
               <input type="password" id="password" pattern="[^\s]{8,}" title="Password must be at least 8 characters and cannot contain spaces" required autocomplete="current-password">
+              <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path class="eye-outline" d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"></path>
+                  <circle cx="12" cy="12" r="2.5"></circle>
+                  <path class="eye-slash" d="m3 3 18 18"></path>
+                </svg>
+              </button>
             </div>
           </label>
           <button type="submit">Sign in</button>
