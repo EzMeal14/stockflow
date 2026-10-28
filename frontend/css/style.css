@@ -9,7 +9,7 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 [data-panel] { display: grid; gap: 16px; }
-body { font-family: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 14px; line-height: 1.5; margin: 0; background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
+body { font-family: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 14px; line-height: 1.5; margin: 0; background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
 body.center { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
 h1 { margin: 0; font-size: 24px; letter-spacing: -.02em; }
 h2 { margin: 0 0 14px; font-size: 17px; letter-spacing: -.01em; }
@@ -259,4 +259,33 @@ body.center .narrow.auth-shell {
   .auth-features div { padding: 9px; }
   .auth-features strong { font-size: 11px; }
   .auth-features span { display: none; }
+}
+
+/* dashboard polish */
+main.page { max-width: 1240px; margin-top: 30px; gap: 20px; }
+.page-intro { display: flex; align-items: flex-end; justify-content: space-between; padding: 2px 4px 4px; }
+.page-intro .eyebrow { margin-bottom: 5px; }
+.page-intro h1 { font-size: clamp(26px, 3vw, 34px); font-weight: 800; letter-spacing: -.045em; }
+.page-intro > div > p:last-child { margin: 6px 0 0; color: var(--muted); }
+.card { border-radius: 16px; padding: 24px; box-shadow: 0 1px 0 rgba(255,255,255,.9) inset, 0 10px 30px rgba(18,28,46,.075); }
+.card h2 { font-size: 18px; font-weight: 800; letter-spacing: -.025em; }
+header.bar { padding: 14px 28px; }
+.brand { font-size: 17px; font-weight: 800; letter-spacing: -.035em; }
+button { border-radius: 10px; font-weight: 700; }
+input, select { border-radius: 10px; }
+th { padding-top: 12px; padding-bottom: 12px; font-size: 11px; font-weight: 800; letter-spacing: .055em; text-transform: uppercase; }
+td { padding-top: 12px; padding-bottom: 12px; }
+nav.tabs { gap: 6px; }
+nav.tabs button { font-weight: 700; }
+
+@media (hover: hover) {
+  .card { transition: box-shadow .2s ease, transform .2s ease; }
+  .card:hover { box-shadow: 0 1px 0 rgba(255,255,255,.9) inset, 0 14px 36px rgba(18,28,46,.10); }
+}
+@media (max-width: 640px) {
+  main.page { margin-top: 18px; gap: 14px; }
+  .page-intro { padding: 0 2px; }
+  .page-intro h1 { font-size: 27px; }
+  .card { padding: 18px; }
+  header.bar { padding: 10px 14px; }
 }
