@@ -4,23 +4,96 @@ const prisma = require('../lib/prisma');
 const { handleError } = require('../lib/errors');
 const { signToken } = require('../lib/auth');
 
-// Anyone can register, but only as a client. Staff, drivers and admins are made by an admin.
-exports.register = async (req, res) => {
+async function sendEmail(email, subject, text) {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) throw new Error('Email verification is not configured');
+  const from = process.env.RESEND_FROM || 'StockFlow <onboarding@resend.dev>';
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from, to: [email], subject, text }),
+  });
+  if (!response.ok) {
+    const provider = await response.json().catch(() => null);
+    const reason = provider && typeof provider.message === 'string'
+      ? `: ${provider.message}`
+      : '';
+    throw new Error(`Could not send verification email${reason}`);
+  }
+}
+
+function registrationPayload(body) {
+  const firstname = String(body.firstname || '').trim();
+  const lastname = String(body.lastname || '').trim();
+  const rawEmail = String(body.email || '');
+  const email = rawEmail.trim().toLowerCase();
+  const password = typeof body.password === 'string' ? body.password : '';
+  if (!firstname || !lastname || !email || !password || email.length > 254
+    || /\s/.test(rawEmail) || password.length < 8 || /\s/.test(password)) {
+    return { error: 'Email and password cannot contain spaces, and the password must have 8 or more characters' };
+  }
+  return { firstname, lastname, email, password };
+}
+
+// Verify ownership before creating a client account. Staff, drivers and admins are made by an admin.
+exports.requestRegistrationCode = async (req, res) => {
   try {
-    const { firstname, lastname, email, password } = req.body;
-    const rawEmail = String(email || '');
-    const normalizedEmail = rawEmail.trim().toLowerCase();
-    const passwordString = typeof password === 'string' ? password : '';
-    if (!firstname || !lastname || !normalizedEmail || !passwordString
-      || normalizedEmail.length > 254 || /\s/.test(rawEmail)
-      || passwordString.length < 8 || /\s/.test(passwordString)) {
-      return res.status(400).json({
-        error: 'Email and password cannot contain spaces, and the password must have 8 or more characters',
-      });
+    const payload = registrationPayload(req.body);
+    if (payload.error) return res.status(400).json({ error: payload.error });
+    const existing = await prisma.users.findUnique({ where: { email: payload.email } });
+    if (existing) return res.status(409).json({ error: 'That email is already registered' });
+
+    const code = String(crypto.randomInt(100000, 1000000));
+    const code_hash = crypto.createHash('sha256').update(code).digest('hex');
+    await prisma.email_verifications.upsert({
+      where: { email: payload.email },
+      update: { code_hash, expires_at: new Date(Date.now() + 10 * 60 * 1000), attempts: 0, created_at: new Date() },
+      create: { email: payload.email, code_hash, expires_at: new Date(Date.now() + 10 * 60 * 1000) },
+    });
+    try {
+      await sendEmail(payload.email, 'Verify your StockFlow email',
+        `Your StockFlow verification code is ${code}. It expires in 10 minutes.`);
+    } catch (err) {
+      await prisma.email_verifications.delete({ where: { email: payload.email } });
+      throw err;
     }
-    const password_hash = await bcrypt.hash(passwordString, 10);
-    const user = await prisma.users.create({
-      data: { firstname, lastname, email: normalizedEmail, password_hash, role: 'client' },
+    res.json({ message: 'Verification code sent. Check your email.' });
+  } catch (err) {
+    handleError(res, err);
+  }
+};
+
+exports.verifyRegistration = async (req, res) => {
+  try {
+    const payload = registrationPayload(req.body);
+    const code = String(req.body.code || '');
+    if (payload.error) return res.status(400).json({ error: payload.error });
+    if (!/^\d{6}$/.test(code)) return res.status(400).json({ error: 'Enter the 6-digit verification code' });
+
+    const code_hash = crypto.createHash('sha256').update(code).digest('hex');
+    const verification = await prisma.email_verifications.findUnique({
+      where: { email: payload.email },
+    });
+    if (!verification || verification.expires_at <= new Date()) {
+      return res.status(400).json({ error: 'Invalid or expired verification code' });
+    }
+    if (verification.attempts >= 5) {
+      await prisma.email_verifications.delete({ where: { email: payload.email } });
+      return res.status(429).json({ error: 'Too many attempts. Request a new verification code.' });
+    }
+    if (verification.code_hash !== code_hash) {
+      await prisma.email_verifications.update({ where: { email: payload.email }, data: { attempts: { increment: 1 } } });
+      return res.status(400).json({ error: 'Invalid verification code' });
+    }
+
+    const password_hash = await bcrypt.hash(payload.password, 10);
+    const user = await prisma.$transaction(async (tx) => {
+      const created = await tx.users.create({
+        data: { firstname: payload.firstname, lastname: payload.lastname, email: payload.email,
+          password_hash, role: 'client' },
+      });
+      await tx.email_verifications.delete({ where: { email: payload.email } });
+      return created;
     });
     res.status(201).json({ user_id: user.user_id, email: user.email, role: user.role });
   } catch (err) {
@@ -42,7 +115,13 @@ async function sendResetCode(email, code) {
       text: `Your StockFlow password reset code is ${code}. It expires in 10 minutes.`,
     }),
   });
-  if (!response.ok) throw new Error('Could not send password reset email');
+  if (!response.ok) {
+    const provider = await response.json().catch(() => null);
+    const reason = provider && typeof provider.message === 'string'
+      ? `: ${provider.message}`
+      : '';
+    throw new Error(`Could not send password reset email${reason}`);
+  }
 }
 
 exports.forgotPassword = async (req, res) => {
