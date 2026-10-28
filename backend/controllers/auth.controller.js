@@ -13,7 +13,13 @@ async function sendEmail(email, subject, text) {
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ from, to: [email], subject, text }),
   });
-  if (!response.ok) throw new Error('Could not send verification email');
+  if (!response.ok) {
+    const provider = await response.json().catch(() => null);
+    const reason = provider && typeof provider.message === 'string'
+      ? `: ${provider.message}`
+      : '';
+    throw new Error(`Could not send verification email${reason}`);
+  }
 }
 
 function registrationPayload(body) {
@@ -109,7 +115,13 @@ async function sendResetCode(email, code) {
       text: `Your StockFlow password reset code is ${code}. It expires in 10 minutes.`,
     }),
   });
-  if (!response.ok) throw new Error('Could not send password reset email');
+  if (!response.ok) {
+    const provider = await response.json().catch(() => null);
+    const reason = provider && typeof provider.message === 'string'
+      ? `: ${provider.message}`
+      : '';
+    throw new Error(`Could not send password reset email${reason}`);
+  }
 }
 
 exports.forgotPassword = async (req, res) => {
