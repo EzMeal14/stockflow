@@ -95,7 +95,6 @@ tr.low td.num:nth-last-child(2) { color: var(--amber); font-weight: 700; }
 /* login */
 body.center .card { box-shadow: 0 12px 32px rgba(18,28,46,.08); }
 body.center form button[type=submit] { width: 100%; margin-top: 10px; }
-#register-verification .link-button { width: 100%; }
 
 @media (max-width: 640px) {
   header.bar { padding: 10px 14px; }

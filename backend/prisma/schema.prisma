@@ -148,17 +148,6 @@ model password_resets {
   @@index([user_id, created_at], map: "idx_password_resets_user")
 }
 
-model email_verifications {
-  verification_id String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email           String   @unique @db.VarChar(255)
-  code_hash       String
-  expires_at      DateTime @db.Timestamp(6)
-  attempts        Int      @default(0)
-  created_at      DateTime @default(now()) @db.Timestamp(6)
-
-  @@index([expires_at], map: "idx_email_verifications_expiry")
-}
-
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model vehicles {
   vehicle_id String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
