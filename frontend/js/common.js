@@ -63,7 +63,9 @@ function requireRole(role) {
     return null;
   }
   document.getElementById('who').textContent = user.firstname + ' ' + user.lastname + ' (' + user.role + ')';
-  document.getElementById('logout').addEventListener('click', logout);
+  document.getElementById('logout').addEventListener('click', () => {
+    if (window.confirm('Are you sure you want to log out?')) logout();
+  });
   return user;
 }
 
