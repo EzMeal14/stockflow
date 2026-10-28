@@ -58,6 +58,12 @@ Before deploying the item-ID backend update to an existing database, run
 conflicts and rolls back rather than overwriting duplicate values. New databases
 should use `01_schema.sql` and do not need this migration.
 
+For an existing database, apply
+`backend/prisma/migrations/20261028030000_add_admin_record_photos/migration.sql`
+in the Supabase SQL Editor using a database owner account before uploading
+warehouse, staff, or driver photos. It adds optional photo columns without
+changing existing records. The limited app role cannot apply schema migrations.
+
 The data dictionary is in `docs/data_dictionary.md`.
 
 ## Run the Backend
