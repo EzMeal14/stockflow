@@ -91,63 +91,23 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   }
 });
 
-// Anyone can register, but only as a verified client.
-const registerForm = document.getElementById('register-form');
-const registerDetails = document.getElementById('register-details');
-const registerVerification = document.getElementById('register-verification');
-const registerEmail = document.getElementById('reg-email');
-const registerSubmit = registerForm.querySelector('button[type="submit"]');
-
-registerForm.addEventListener('submit', async (e) => {
+// Anyone can register, but only as a client
+document.getElementById('register-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   setMessage('register-message', '', true);
-  const waitingForCode = !registerVerification.hidden;
-  registerSubmit.disabled = true;
-  registerSubmit.textContent = waitingForCode ? 'Verifying...' : 'Sending verification code...';
   try {
-    if (!waitingForCode) {
-      await api('/auth/register', {
-        method: 'POST',
-        body: {
-          firstname: document.getElementById('reg-first').value.trim(),
-          lastname: document.getElementById('reg-last').value.trim(),
-          email: registerEmail.value.trim(),
-          password: document.getElementById('reg-password').value,
-        },
-      });
-      registerDetails.hidden = true;
-      registerVerification.hidden = false;
-      setMessage('register-message', `Verification code sent to ${registerEmail.value.trim()}. Enter the 6-digit code to continue.`, true);
-      document.getElementById('reg-code').focus();
-      return;
-    }
-
-    await api('/auth/register/verify', {
+    await api('/auth/register', {
       method: 'POST',
       body: {
         firstname: document.getElementById('reg-first').value.trim(),
         lastname: document.getElementById('reg-last').value.trim(),
-        email: registerEmail.value.trim(),
+        email: document.getElementById('reg-email').value.trim(),
         password: document.getElementById('reg-password').value,
-        code: document.getElementById('reg-code').value,
       },
     });
-    setMessage('register-message', 'Account created and email verified. You can sign in now.', true);
-    registerForm.reset();
-    registerDetails.hidden = false;
-    registerVerification.hidden = true;
+    setMessage('register-message', 'Account created. You can sign in now.', true);
+    e.target.reset();
   } catch (err) {
     setMessage('register-message', err.message, false);
-  } finally {
-    registerSubmit.disabled = false;
-    registerSubmit.textContent = waitingForCode ? 'Verify and create account' : 'Send verification code';
   }
-});
-
-document.getElementById('change-register-email').addEventListener('click', () => {
-  registerDetails.hidden = false;
-  registerVerification.hidden = true;
-  document.getElementById('reg-code').value = '';
-  setMessage('register-message', '', true);
-  registerEmail.focus();
 });
