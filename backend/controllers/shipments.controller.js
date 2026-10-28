@@ -60,7 +60,10 @@ exports.create = async (req, res) => {
     if (order.status !== 'confirmed') {
       return res.status(400).json({ error: 'Only confirmed orders can be shipped' });
     }
-    const driver = await prisma.users.findUnique({ where: { user_id: driver_id } });
+    const driver = await prisma.users.findUnique({
+      where: { user_id: driver_id },
+      select: { user_id: true, role: true, is_active: true },
+    });
     if (!driver || driver.role !== 'driver' || !driver.is_active) {
       return res.status(400).json({ error: 'driver_id must be an active driver' });
     }

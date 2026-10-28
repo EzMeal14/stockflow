@@ -1,2 +1,2 @@
 ALTER TABLE "items"
-ADD COLUMN "image_data" TEXT;
+ADD COLUMN IF NOT EXISTS "image_data" TEXT;
