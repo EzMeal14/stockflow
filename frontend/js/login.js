@@ -96,11 +96,14 @@ const registerForm = document.getElementById('register-form');
 const registerDetails = document.getElementById('register-details');
 const registerVerification = document.getElementById('register-verification');
 const registerEmail = document.getElementById('reg-email');
+const registerSubmit = registerForm.querySelector('button[type="submit"]');
 
 registerForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   setMessage('register-message', '', true);
   const waitingForCode = !registerVerification.hidden;
+  registerSubmit.disabled = true;
+  registerSubmit.textContent = waitingForCode ? 'Verifying...' : 'Sending verification code...';
   try {
     if (!waitingForCode) {
       await api('/auth/register', {
@@ -114,7 +117,7 @@ registerForm.addEventListener('submit', async (e) => {
       });
       registerDetails.hidden = true;
       registerVerification.hidden = false;
-      setMessage('register-message', 'Enter the 6-digit code sent to your email.', true);
+      setMessage('register-message', `Verification code sent to ${registerEmail.value.trim()}. Enter the 6-digit code to continue.`, true);
       document.getElementById('reg-code').focus();
       return;
     }
@@ -135,6 +138,9 @@ registerForm.addEventListener('submit', async (e) => {
     registerVerification.hidden = true;
   } catch (err) {
     setMessage('register-message', err.message, false);
+  } finally {
+    registerSubmit.disabled = false;
+    registerSubmit.textContent = waitingForCode ? 'Verify and create account' : 'Send verification code';
   }
 });
 
