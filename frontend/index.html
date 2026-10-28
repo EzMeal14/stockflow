@@ -1,89 +1,95 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <title>BuildStock - Sign in</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
-</head>
-<body class="center">
-  <main class="card narrow auth-shell">
-    <section class="auth-panel">
-      <div class="lockup"><i class="mark"></i><h1>BuildStock</h1></div>
-      <p class="auth-subtitle">Hardware and construction supplies, managed from warehouse to job site.</p>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BuildStock - Sign in</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+  </head>
+  <body class="center">
+    <main class="card narrow auth-shell">
+      <section class="auth-panel">
+        <div class="lockup"><i class="mark"></i><h1>BuildStock</h1></div>
+        <p class="auth-subtitle">Hardware and construction supplies, managed from warehouse to job site.</p>
 
-      <form id="login-form">
-      <label>Email
-        <input type="email" id="email" pattern="[^\s@]+@[^\s@]+\.[^\s@]+" title="Enter an email address without spaces" required autocomplete="username">
-      </label>
-      <label>Password
-        <div class="password-field">
-          <input type="password" id="password" pattern="[^\s]{8,}" title="Password must be at least 8 characters and cannot contain spaces" required autocomplete="current-password">
+        <form id="login-form">
+          <label>Email
+            <input type="email" id="email" pattern="[^\s@]+@[^\s@]+\.[^\s@]+" title="Enter an email address without spaces" required autocomplete="username">
+          </label>
+          <label>Password
+            <div class="password-field">
+              <input type="password" id="password" pattern="[^\s]{8,}" title="Password must be at least 8 characters and cannot contain spaces" required autocomplete="current-password">
+              <button type="button" class="password-toggle" aria-label="Show password" aria-pressed="false">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path class="eye-outline" d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"></path>
+                  <circle cx="12" cy="12" r="2.5"></circle>
+                  <path class="eye-slash" d="m3 3 18 18"></path>
+                </svg>
+              </button>
+            </div>
+          </label>
+          <button type="submit">Sign in</button>
+          <button type="button" id="forgot-password-button" class="link-button">Forgot password?</button>
+          <p id="login-message"></p>
+        </form>
+
+        <section id="forgot-password-panel" class="forgot-password-panel" hidden>
+          <h2>Reset password</h2>
+          <form id="forgot-password-form">
+            <label>Email
+              <input type="email" id="reset-email" pattern="[^\s@]+@[^\s@]+\.[^\s@]+" required autocomplete="username">
+            </label>
+            <button type="submit">Send verification code</button>
+          </form>
+          <form id="reset-password-form" hidden>
+            <label>Verification code
+              <input type="text" id="reset-code" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" required>
+            </label>
+            <label>New password
+              <input type="password" id="reset-password" minlength="8" pattern="[^\s]{8,}" required autocomplete="new-password">
+            </label>
+            <button type="submit">Change password</button>
+          </form>
+          <button type="button" id="cancel-reset-button" class="link-button">Back to sign in</button>
+          <p id="reset-message"></p>
+        </section>
+
+        <hr>
+        <details>
+          <summary>New client? Create an account</summary>
+          <form id="register-form">
+            <label>First name <input id="reg-first" required></label>
+            <label>Last name <input id="reg-last" required></label>
+            <label>Email <input type="email" id="reg-email" pattern="[^\s@]+@[^\s@]+\.[^\s@]+" title="Enter an email address without spaces" required></label>
+            <label>Password (8 or more characters)
+              <div class="password-field">
+                <input type="password" id="reg-password" minlength="8" pattern="[^\s]{8,}" title="Password must be at least 8 characters and cannot contain spaces" required autocomplete="new-password">
+              </div>
+            </label>
+            <button type="submit">Create account</button>
+            <p id="register-message"></p>
+          </form>
+        </details>
+      </section>
+
+      <aside class="auth-story" aria-label="BuildStock overview">
+        <div class="auth-story-glow"></div>
+        <span class="auth-eyebrow">HARDWARE &amp; CONSTRUCTION SUPPLIES</span>
+        <h2>From warehouse to worksite.</h2>
+        <p>We supply hardware stores and contractors. Warehouses hold the stock, and trucks deliver to the store or the job site.</p>
+        <div class="auth-features">
+          <div><strong>Warehouse inventory</strong><span>Know what stock is available</span></div>
+          <div><strong>Contractor orders</strong><span>Deliver supplies with confidence</span></div>
+          <div><strong>Truck tracking</strong><span>Follow every delivery</span></div>
         </div>
-      </label>
-      <button type="submit">Sign in</button>
-      <button type="button" id="forgot-password-button" class="link-button">Forgot password?</button>
-      <p id="login-message"></p>
-    </form>
+      </aside>
+    </main>
 
-    <section id="forgot-password-panel" class="forgot-password-panel" hidden>
-      <h2>Reset password</h2>
-      <form id="forgot-password-form">
-        <label>Email
-          <input type="email" id="reset-email" pattern="[^\s@]+@[^\s@]+\.[^\s@]+" required autocomplete="username">
-        </label>
-        <button type="submit">Send verification code</button>
-      </form>
-      <form id="reset-password-form" hidden>
-        <label>Verification code
-          <input type="text" id="reset-code" inputmode="numeric" minlength="6" maxlength="6" pattern="[0-9]{6}" required>
-        </label>
-        <label>New password
-          <input type="password" id="reset-password" minlength="8" pattern="[^\s]{8,}" required autocomplete="new-password">
-        </label>
-        <button type="submit">Change password</button>
-      </form>
-      <button type="button" id="cancel-reset-button" class="link-button">Back to sign in</button>
-      <p id="reset-message"></p>
-    </section>
-
-    <hr>
-    <details>
-      <summary>New client? Create an account</summary>
-      <form id="register-form">
-        <label>First name <input id="reg-first" required></label>
-        <label>Last name <input id="reg-last" required></label>
-        <label>Email <input type="email" id="reg-email" pattern="[^\s@]+@[^\s@]+\.[^\s@]+" title="Enter an email address without spaces" required></label>
-        <label>Password (8 or more characters)
-          <div class="password-field">
-            <input type="password" id="reg-password" minlength="8" pattern="[^\s]{8,}" title="Password must be at least 8 characters and cannot contain spaces" required autocomplete="new-password">
-          </div>
-        </label>
-        <button type="submit">Create account</button>
-        <p id="register-message"></p>
-      </form>
-      </details>
-    </section>
-
-    <aside class="auth-story" aria-label="BuildStock overview">
-      <div class="auth-story-glow"></div>
-      <span class="auth-eyebrow">HARDWARE &amp; CONSTRUCTION SUPPLIES</span>
-      <h2>From warehouse to worksite.</h2>
-      <p>We supply hardware stores and contractors. Warehouses hold the stock, and trucks deliver to the store or the job site.</p>
-      <div class="auth-features">
-        <div><strong>Warehouse inventory</strong><span>Know what stock is available</span></div>
-        <div><strong>Contractor orders</strong><span>Deliver supplies with confidence</span></div>
-        <div><strong>Truck tracking</strong><span>Follow every delivery</span></div>
-      </div>
-    </aside>
-  </main>
-
-  <script src="js/config.js"></script>
-  <script src="js/common.js"></script>
-  <script src="js/login.js"></script>
-</body>
+    <script src="js/config.js"></script>
+    <script src="js/common.js"></script>
+    <script src="js/login.js"></script>
+  </body>
 </html>
