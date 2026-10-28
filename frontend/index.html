@@ -10,11 +10,12 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="center">
-  <main class="card narrow">
-    <div class="lockup"><i class="mark"></i><h1>StockFlow</h1></div>
-    <p class="muted">Multi-Branch Warehouse &amp; Shipment Tracker</p>
+  <main class="card narrow auth-shell">
+    <section class="auth-panel">
+      <div class="lockup"><i class="mark"></i><h1>StockFlow</h1></div>
+      <p class="auth-subtitle">Your warehouse, inventory and shipments in one clear workspace.</p>
 
-    <form id="login-form">
+      <form id="login-form">
       <label>Email
         <input type="email" id="email" pattern="[^\s@]+@[^\s@]+\.[^\s@]+" title="Enter an email address without spaces" required autocomplete="username">
       </label>
@@ -64,7 +65,20 @@
         <button type="submit">Create account</button>
         <p id="register-message"></p>
       </form>
-    </details>
+      </details>
+    </section>
+
+    <aside class="auth-story" aria-label="StockFlow overview">
+      <div class="auth-story-glow"></div>
+      <span class="auth-eyebrow">WAREHOUSE OPERATIONS</span>
+      <h2>Keep every branch moving.</h2>
+      <p>Track stock levels, coordinate shipments and make confident decisions from one connected dashboard.</p>
+      <div class="auth-features">
+        <div><strong>Live inventory</strong><span>See what is available</span></div>
+        <div><strong>Order control</strong><span>Move requests with clarity</span></div>
+        <div><strong>Shipment tracking</strong><span>Stay ahead of delivery</span></div>
+      </div>
+    </aside>
   </main>
 
   <script src="js/config.js"></script>

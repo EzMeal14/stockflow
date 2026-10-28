@@ -161,8 +161,65 @@ main.page, body.center > .card { animation: rise .5s cubic-bezier(.2,.7,.2,1) bo
 @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
 
 /* login */
+body.center { background: #eef3f5; }
 body.center .card { box-shadow: 0 1px 0 rgba(255,255,255,.9) inset, 0 24px 60px rgba(18,28,46,.16); }
 body.center .lockup .mark { box-shadow: 0 6px 16px rgba(14,111,104,.4); }
+body.center .narrow.auth-shell {
+  width: min(860px, calc(100vw - 32px)); max-width: 860px; display: grid;
+  grid-template-columns: minmax(0, 430px) 1fr; gap: 0; padding: 0;
+  overflow: hidden; border-radius: 20px;
+}
+.auth-panel { min-width: 0; padding: 38px 42px 34px; }
+.auth-panel h1 { font-size: 27px; }
+.auth-subtitle { max-width: 330px; margin: 8px 0 24px; color: var(--muted); }
+.auth-panel label { margin: 14px 0; }
+.auth-panel input { height: 44px; border-radius: 10px; }
+.auth-panel form button[type="submit"] { height: 44px; border-radius: 10px; }
+.auth-panel #forgot-password-button { display: table; margin: 14px auto 0; }
+.auth-panel hr { margin: 22px 0 14px; }
+.auth-panel details {
+  border: 1px solid rgba(14,111,104,.14); border-radius: 12px;
+  background: linear-gradient(180deg, rgba(227,243,241,.62), rgba(255,255,255,.74));
+}
+.auth-panel details summary { display: flex; align-items: center; justify-content: space-between;
+  margin: 0; padding: 13px 15px; list-style: none; }
+.auth-panel details summary::-webkit-details-marker { display: none; }
+.auth-panel details summary::after { content: "+"; display: grid; place-items: center;
+  width: 24px; height: 24px; border-radius: 50%; background: #fff; color: var(--brand); font-size: 18px; }
+.auth-panel details[open] summary::after { content: "−"; }
+.auth-panel details form { padding: 0 15px 15px; }
+.auth-panel details form button { margin-top: 4px; }
+.auth-story {
+  position: relative; display: flex; flex-direction: column; justify-content: flex-end;
+  min-height: 620px; padding: 42px; overflow: hidden;
+  background: linear-gradient(145deg, #093f3b 0%, #0e6f68 58%, #15958a 100%); color: #fff;
+}
+.auth-story::before { content: ""; position: absolute; width: 310px; height: 310px;
+  right: -120px; top: -90px; border: 1px solid rgba(255,255,255,.16); border-radius: 50%;
+  box-shadow: 0 0 0 46px rgba(255,255,255,.025), 0 0 0 92px rgba(255,255,255,.018); }
+.auth-story-glow { position: absolute; width: 260px; height: 260px; right: 10%; bottom: 22%;
+  background: radial-gradient(circle, rgba(119,230,216,.28), transparent 68%); }
+.auth-eyebrow { position: relative; color: #9ee0d8; font-size: 11px; font-weight: 700; letter-spacing: .16em; }
+.auth-story h2 { position: relative; max-width: 310px; margin: 13px 0 12px;
+  font-size: clamp(30px, 4vw, 42px); line-height: 1.08; letter-spacing: -.035em; }
+.auth-story > p { position: relative; max-width: 310px; color: rgba(255,255,255,.78); }
+.auth-features { position: relative; display: grid; gap: 10px; margin-top: 28px; }
+.auth-features div { display: grid; gap: 1px; padding: 11px 14px;
+  border: 1px solid rgba(255,255,255,.12); border-radius: 11px; background: rgba(255,255,255,.07); }
+.auth-features strong { font-size: 13px; }
+.auth-features span { color: rgba(255,255,255,.66); font-size: 12px; }
+.forgot-password-panel { padding: 2px 0; }
 
 @media (prefers-reduced-motion: reduce) { body::after, main.page, body.center > .card, [data-panel] { animation: none !important; } button:hover { transform: none; } }
-@media (max-width: 640px) { body::before { background-size: 32px 32px; } }
+@media (max-width: 740px) {
+  body::before { background-size: 32px 32px; }
+  body.center { align-items: start; padding: 12px; }
+  body.center .narrow.auth-shell { grid-template-columns: 1fr; width: 100%; border-radius: 16px; }
+  .auth-panel { padding: 28px 22px 24px; }
+  .auth-story { min-height: 220px; padding: 28px 24px; }
+  .auth-story h2 { font-size: 28px; }
+  .auth-features { grid-template-columns: repeat(3, 1fr); }
+  .auth-features div { padding: 9px; }
+  .auth-features strong { font-size: 11px; }
+  .auth-features span { display: none; }
+}
