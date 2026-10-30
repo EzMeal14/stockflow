@@ -77,8 +77,7 @@ async function initOps(ctx) {
   // Only confirmed orders that have no shipment yet can be shipped
   function fillShipOrders() {
     const shipped = new Set(state.ships.map((s) => s.order_id));
-    const ready = state.orders.filter((o) => o.status === 'confirmed'
-      && o.payment_status !== 'unpaid' && !shipped.has(o.order_id));
+    const ready = state.orders.filter((o) => o.status === 'confirmed' && !shipped.has(o.order_id));
     fillSelect($('ship-order'), ready, (o) => o.order_id,
       (o) => shortId(o.order_id) + ' - ' + o.delivery_address);
   }
@@ -138,7 +137,6 @@ async function initOps(ctx) {
     const cols = [
       { key: 'created_at', label: 'Date', format: fmtDate },
       { key: 'status', label: 'Status' },
-      { key: 'payment_status', label: 'Payment' },
       { key: 'delivery_address', label: 'Deliver to' },
       { key: 'order_id', label: 'Order', format: shortId },
     ];
