@@ -55,14 +55,19 @@ function checkoutReturnUrl(orderId, result) {
 function verifyWebhookSignature(rawBody, signature) {
   const secret = process.env.PAYMONGO_WEBHOOK_SECRET;
   if (!secret || !Buffer.isBuffer(rawBody) || !signature) return false;
-  const expected = crypto.createHmac('sha256', secret).update(rawBody).digest();
-  let received;
-  try {
-    received = Buffer.from(signature, 'hex');
-  } catch (err) {
-    return false;
-  }
-  return received.length === expected.length && crypto.timingSafeEqual(received, expected);
+  const parts = Object.fromEntries(signature.split(',').map((part) => {
+    const separator = part.indexOf('=');
+    return separator > 0 ? [part.slice(0, separator).trim(), part.slice(separator + 1).trim()] : ['', ''];
+  }).filter(([key, value]) => key && value));
+  if (!/^\d+$/.test(parts.t || '')) return false;
+
+  const signedPayload = Buffer.concat([Buffer.from(`${parts.t}.`), rawBody]);
+  const expected = crypto.createHmac('sha256', secret).update(signedPayload).digest();
+  return ['te', 'li'].some((key) => {
+    if (!/^[a-f0-9]{64}$/i.test(parts[key] || '')) return false;
+    const received = Buffer.from(parts[key], 'hex');
+    return received.length === expected.length && crypto.timingSafeEqual(received, expected);
+  });
 }
 
 module.exports = {
