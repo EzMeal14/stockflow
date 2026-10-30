@@ -14,6 +14,18 @@ exports.list = async (req, res) => {
   }
 };
 
+exports.listInactive = async (req, res) => {
+  try {
+    const rows = await prisma.vehicles.findMany({
+      where: { is_active: false },
+      orderBy: { plate: 'asc' },
+    });
+    res.json(rows);
+  } catch (err) {
+    handleError(res, err);
+  }
+};
+
 exports.create = async (req, res) => {
   try {
     const { plate, type } = req.body;
@@ -46,6 +58,18 @@ exports.deactivate = async (req, res) => {
     const row = await prisma.vehicles.update({
       where: { vehicle_id: req.params.id },
       data: { is_active: false },
+    });
+    res.json(row);
+  } catch (err) {
+    handleError(res, err);
+  }
+};
+
+exports.restore = async (req, res) => {
+  try {
+    const row = await prisma.vehicles.update({
+      where: { vehicle_id: req.params.id },
+      data: { is_active: true },
     });
     res.json(row);
   } catch (err) {

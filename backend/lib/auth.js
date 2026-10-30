@@ -16,12 +16,17 @@ async function authenticate(req, res, next) {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const user = await prisma.users.findUnique({
       where: { user_id: payload.sub },
-      select: { user_id: true, role: true, warehouse_id: true, is_active: true },
+      select: { user_id: true, role: true, warehouse_id: true, is_active: true, is_available: true },
     });
     if (!user || !user.is_active) {
       return res.status(401).json({ error: 'Account not found or disabled' });
     }
-    req.user = { user_id: user.user_id, role: user.role, warehouse_id: user.warehouse_id };
+    req.user = {
+      user_id: user.user_id,
+      role: user.role,
+      warehouse_id: user.warehouse_id,
+      is_available: user.is_available,
+    };
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Invalid or expired token' });

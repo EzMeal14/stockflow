@@ -127,6 +127,7 @@ model users {
   warehouse_id    String?           @db.Uuid
   contact_number  String?           @db.VarChar(20)
   photo_data      String?           @db.Text
+  is_available    Boolean           @default(true)
   is_active       Boolean           @default(true)
   created_at      DateTime          @default(now()) @db.Timestamp(6)
   audit_logs      audit_logs[]

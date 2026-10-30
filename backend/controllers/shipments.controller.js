@@ -52,6 +52,9 @@ exports.create = async (req, res) => {
     if (!order_id || !driver_id || !vehicle_id) {
       return res.status(400).json({ error: 'order_id, driver_id and vehicle_id are required' });
     }
+    if (req.user.role === 'staff' && !req.user.is_available) {
+      return res.status(403).json({ error: 'You must be marked available to create shipments' });
+    }
     const order = await prisma.orders.findUnique({ where: { order_id } });
     if (!order) return res.status(404).json({ error: 'Order not found' });
     if (req.user.role === 'staff' && order.warehouse_id !== req.user.warehouse_id) {
@@ -62,10 +65,10 @@ exports.create = async (req, res) => {
     }
     const driver = await prisma.users.findUnique({
       where: { user_id: driver_id },
-      select: { user_id: true, role: true, is_active: true },
+      select: { user_id: true, role: true, is_active: true, is_available: true },
     });
-    if (!driver || driver.role !== 'driver' || !driver.is_active) {
-      return res.status(400).json({ error: 'driver_id must be an active driver' });
+    if (!driver || driver.role !== 'driver' || !driver.is_active || !driver.is_available) {
+      return res.status(400).json({ error: 'driver_id must be an active and available driver' });
     }
     const vehicle = await prisma.vehicles.findUnique({ where: { vehicle_id } });
     if (!vehicle || !vehicle.is_active) {
@@ -108,6 +111,9 @@ exports.updateStatus = async (req, res) => {
     if (!shipment) return res.status(404).json({ error: 'Not found' });
 
     const { status } = req.body;
+    if (req.user.role === 'driver' && status === 'delivered' && !req.user.is_available) {
+      return res.status(403).json({ error: 'You must be marked available to deliver shipments' });
+    }
     if (!(NEXT[shipment.status] || []).includes(status)) {
       return res.status(400).json({ error: `Cannot change from ${shipment.status} to ${status}` });
     }

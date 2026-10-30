@@ -3,6 +3,8 @@ const user = requireRole('admin');
 let ops = null;
 let staffCrud = null;
 let itemCrud = null;
+let vehicleCrud = null;
+let inactiveVehicles = null;
 // After items, warehouses, vehicles, drivers or staff change, refresh the lists used by the other tabs.
 // The staff form also has a warehouse list, so it reloads when a warehouse is added or removed.
 const refreshOps = () => {
@@ -15,6 +17,7 @@ if (user) {
 
   itemCrud = setupItemManager();
   setupInactiveItems();
+  inactiveVehicles = setupInactiveVehicles();
 
   setupCrud({
     root: 'warehouses-root', path: '/warehouses', idKey: 'warehouse_id',
@@ -34,9 +37,10 @@ if (user) {
     ],
   });
 
-  setupCrud({
+  vehicleCrud = setupCrud({
     root: 'vehicles-root', path: '/vehicles', idKey: 'vehicle_id',
     tileLayout: true, entityName: 'vehicle', tileType: 'Vehicle', tilePlural: 'Vehicles', tileMark: 'VH',
+    afterRemove: () => inactiveVehicles.reload(),
     tileTitle: (row) => row.plate,
     tileDetails: [{ key: 'type', label: 'Type' }],
     fields: [
@@ -53,14 +57,15 @@ if (user) {
   setupCrud({
     root: 'drivers-root', path: '/drivers', idKey: 'user_id',
     tileLayout: true, entityName: 'driver', tileType: 'Driver', tilePlural: 'Drivers', tileMark: 'DR',
+    availabilityPath: '/availability',
     photoField: true,
     tileTitle: (row) => row.firstname + ' ' + row.lastname,
     tileDetails: [{ key: 'email', label: 'Email' }, { key: 'contact_number', label: 'Contact' }],
     canEdit: false,
     removeLabel: 'Remove',
-    confirmText: 'Remove this driver? The account is switched off. Past shipments stay in the history.',
-    removedMessage: 'Driver removed.',
-    hint: 'A new driver signs in with this email and password. A driver who still has open shipments cannot be removed.',
+    confirmText: 'Remove this driver because they are leaving work? Their account will be disabled, and past shipments will stay in the history.',
+    removedMessage: 'Driver account disabled. Past shipments remain in the history.',
+    hint: 'A new driver signs in with this email and password. Mark a driver not available to pause new shipment assignments; use Remove only when they leave work. A driver with open shipments cannot be removed.',
     fields: [
       { key: 'firstname', label: 'First name', required: true },
       { key: 'lastname', label: 'Last name', required: true },
@@ -81,6 +86,7 @@ if (user) {
   staffCrud = setupCrud({
     root: 'staff-root', path: '/staff', idKey: 'user_id',
     tileLayout: true, entityName: 'staff member', tileType: 'Staff', tilePlural: 'Staff', tileMark: 'ST',
+    availabilityPath: '/availability',
     photoField: true,
     tileTitle: (row) => row.firstname + ' ' + row.lastname,
     tileDetails: [
@@ -90,9 +96,9 @@ if (user) {
     ],
     canEdit: false,
     removeLabel: 'Remove',
-    confirmText: 'Remove this staff member? The account is switched off. Past records stay in the history.',
-    removedMessage: 'Staff member removed.',
-    hint: 'A new staff member signs in with this email and password. They only see the orders, shipments and stock of the warehouse you choose.',
+    confirmText: 'Remove this staff member because they are leaving work? Their account will be disabled, and past records will stay in the history.',
+    removedMessage: 'Staff account disabled. Past records remain in the history.',
+    hint: 'A new staff member signs in with this email and password. Availability is shown alongside their assigned warehouse. Use Remove only when they leave work; account history is kept.',
     fields: [
       { key: 'firstname', label: 'First name', required: true },
       { key: 'lastname', label: 'Last name', required: true },
@@ -437,6 +443,56 @@ async function setupInactiveItems() {
   });
 }
 
+function setupInactiveVehicles() {
+  const root = document.getElementById('inactive-vehicles-root');
+  const message = document.getElementById('inactive-vehicles-message');
+  const grid = el('div', { class: 'item-grid' });
+  const vehicleCfg = {
+    tileTitle: (row) => row.plate,
+    tileType: 'Vehicle',
+    tileMark: 'VH',
+    tileDetails: [{ key: 'type', label: 'Type' }],
+  };
+  root.replaceChildren(grid);
+
+  async function load() {
+    try {
+      const rows = await api('/vehicles/inactive');
+      message.textContent = '';
+      message.className = '';
+      grid.replaceChildren();
+      if (!rows.length) {
+        grid.append(el('div', { class: 'item-empty', text: 'No deactivated vehicles.' }));
+        return;
+      }
+      rows.forEach((row) => grid.append(renderRecordTile(row, vehicleCfg, [
+        btn('Restore vehicle', () => restore(row), 'secondary'),
+      ], true)));
+    } catch (err) {
+      message.textContent = err.message;
+      message.className = 'error';
+      throw err;
+    }
+  }
+
+  async function restore(row) {
+    if (!confirm('Restore vehicle "' + row.plate + '"? It will be available for new shipments.')) return;
+    try {
+      await api('/vehicles/' + row.vehicle_id + '/restore', { method: 'POST' });
+      await Promise.all([load(), vehicleCrud.reloadTable()]);
+      refreshOps();
+      message.textContent = 'Vehicle restored.';
+      message.className = 'ok';
+    } catch (err) {
+      message.textContent = err.message;
+      message.className = 'error';
+    }
+  }
+
+  load().catch((err) => console.error('Could not load deactivated vehicles:', err));
+  return { reload: load };
+}
+
 function renderItemTile(item, actions, inactive = false) {
   const media = item.image_data
     ? el('img', { class: 'item-card-image', src: item.image_data, alt: item.name, loading: 'lazy' })
@@ -463,7 +519,7 @@ function renderItemTile(item, actions, inactive = false) {
   );
 }
 
-function renderRecordTile(row, cfg, actions) {
+function renderRecordTile(row, cfg, actions, inactive = false, statusLabel = null) {
   const photo = cfg.photoField && row.photo_data
     ? el('img', { class: 'item-card-image', src: row.photo_data, alt: cfg.tileTitle(row), loading: 'lazy' })
     : el('div', { class: 'item-card-placeholder' },
@@ -479,7 +535,7 @@ function renderRecordTile(row, cfg, actions) {
       el('strong', { text: value })
     );
   });
-  return el('article', { class: 'item-card record-card' },
+  return el('article', { class: 'item-card record-card' + (inactive ? ' item-card-inactive' : '') },
     el('div', { class: 'item-card-media record-card-media' }, cfg.photoField
       ? photo
       : el('div', null,
@@ -487,6 +543,8 @@ function renderRecordTile(row, cfg, actions) {
         el('span', { class: 'record-tile-label', text: cfg.tileType })
       )),
     el('div', { class: 'item-card-content' },
+        statusLabel ? el('span', { class: 'item-card-state' + (inactive ? ' is-inactive' : ''), text: statusLabel })
+          : inactive ? el('span', { class: 'item-card-state is-inactive', text: 'Deactivated' }) : null,
       el('h3', { class: 'record-card-title', text: cfg.tileTitle(row) }),
       el('div', { class: 'record-card-details' }, details),
       el('div', { class: 'item-card-actions' }, actions)
@@ -507,6 +565,7 @@ function setupCrud(cfg) {
   let editingId = null;
   const isTileLayout = cfg.tileLayout === true;
   const photoKey = cfg.photoField ? 'photo_data' : null;
+  const hasAvailability = Boolean(cfg.availabilityPath);
   let selectedPhotoData = null;
   let removeExistingPhoto = false;
 
@@ -574,17 +633,37 @@ function setupCrud(cfg) {
   const hint = cfg.hint ? el('p', { class: 'muted record-form-hint', text: cfg.hint }) : null;
   const table = isTileLayout ? null : el('table');
   const tileGrid = isTileLayout ? el('div', { class: 'item-grid record-grid' }) : null;
-  const listing = isTileLayout
-    ? el('section', { class: 'record-listing' },
+  const listingHeading = isTileLayout
+    ? el('div', { class: 'record-listing-heading' },
+      el('div', null,
+        el('p', { class: 'eyebrow', text: 'Directory' }),
+        el('h3', { text: cfg.tilePlural })
+      ),
+      el('span', { class: 'record-count', text: 'Loading...' })
+    )
+    : null;
+  const availabilityGrids = hasAvailability ? {
+    available: el('div', { class: 'item-grid record-grid' }),
+    unavailable: el('div', { class: 'item-grid record-grid' }),
+  } : null;
+  const availabilityListing = availabilityGrids ? el('div', { class: 'record-availability' },
+    el('section', { class: 'record-availability-section' },
       el('div', { class: 'record-listing-heading' },
-        el('div', null,
-          el('p', { class: 'eyebrow', text: 'Directory' }),
-          el('h3', { text: cfg.tilePlural })
-        ),
+        el('h4', { text: 'Available' }),
         el('span', { class: 'record-count', text: 'Loading...' })
       ),
-      tileGrid
+      availabilityGrids.available
+    ),
+    el('section', { class: 'record-availability-section' },
+      el('div', { class: 'record-listing-heading' },
+        el('h4', { text: 'Not available' }),
+        el('span', { class: 'record-count', text: 'Loading...' })
+      ),
+      availabilityGrids.unavailable
     )
+  ) : null;
+  const listing = isTileLayout
+    ? el('section', { class: 'record-listing' }, listingHeading, availabilityListing || tileGrid)
     : table;
   root.replaceChildren(...[form, hint, msg, listing].filter(Boolean));
 
@@ -695,6 +774,17 @@ function setupCrud(cfg) {
     if (isTileLayout) {
       tileGrid.replaceChildren();
       listing.querySelector('.record-count').textContent = String(sortedRows.length) + (sortedRows.length === 1 ? ' record' : ' records');
+      if (hasAvailability) {
+        const available = sortedRows.filter((row) => row.is_available);
+        const unavailable = sortedRows.filter((row) => !row.is_available);
+        const availableSection = availabilityGrids.available.parentElement;
+        const unavailableSection = availabilityGrids.unavailable.parentElement;
+        availableSection.querySelector('.record-count').textContent = String(available.length);
+        unavailableSection.querySelector('.record-count').textContent = String(unavailable.length);
+        renderAvailabilityGroup(availabilityGrids.available, available, true);
+        renderAvailabilityGroup(availabilityGrids.unavailable, unavailable, false);
+        return;
+      }
       if (!sortedRows.length) {
         tileGrid.append(el('div', { class: 'item-empty', text: 'No ' + cfg.tileType.toLowerCase() + ' records yet.' }));
         return;
@@ -714,12 +804,50 @@ function setupCrud(cfg) {
     }
   }
 
+  function renderAvailabilityGroup(grid, rows, available) {
+    grid.replaceChildren();
+    if (!rows.length) {
+      grid.append(el('div', {
+        class: 'item-empty',
+        text: available ? 'No available ' + cfg.tilePlural.toLowerCase() + '.' : 'No ' + cfg.tilePlural.toLowerCase() + ' are marked not available.',
+      }));
+      return;
+    }
+    rows.forEach((row) => {
+      const actions = [
+        btn(available ? 'Mark not available' : 'Mark available', () => setAvailability(row, !available), 'secondary'),
+        btn(cfg.removeLabel || 'Deactivate', () => remove(row), 'secondary'),
+      ];
+      grid.append(renderRecordTile(row, cfg, actions, !available, available ? 'Available' : 'Not available'));
+    });
+  }
+
+  async function setAvailability(row, isAvailable) {
+    const name = cfg.tileTitle(row);
+    const confirmation = isAvailable
+      ? 'Mark "' + name + '" as available for work again?'
+      : 'Mark "' + name + '" as not available? They will not be assigned new work.';
+    if (!confirm(confirmation)) return;
+    try {
+      await api(cfg.path + '/' + row[cfg.idKey] + cfg.availabilityPath, {
+        method: 'PATCH',
+        body: { is_available: isAvailable },
+      });
+      await load();
+      refreshOps();
+      say(name + (isAvailable ? ' is now available.' : ' is now not available.'), true);
+    } catch (err) {
+      say(err.message, false);
+    }
+  }
+
   async function remove(row) {
     const question = cfg.confirmText || 'Deactivate this record? It will be hidden, not deleted.';
     if (!confirm(question)) return;
     try {
       await api(cfg.path + '/' + row[cfg.idKey], { method: 'DELETE' });
       await load();
+      if (cfg.afterRemove) await cfg.afterRemove();
       refreshOps();
       say(cfg.removedMessage || 'Record deactivated.', true);
     } catch (err) {
