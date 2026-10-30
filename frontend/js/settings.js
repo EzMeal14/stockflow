@@ -44,25 +44,7 @@ function openSettings() {
     el('button', { type: 'submit', text: 'Change password' })
   );
 
-  const email = el('form', { id: 'email-request-form', class: 'settings-form' },
-    el('h3', { text: 'Change email' }),
-    el('p', { class: 'muted', text: 'We will send a verification code to the new address.' }),
-    el('div', { class: 'settings-grid' },
-      el('label', null, 'New email', el('input', { name: 'email', type: 'email', maxlength: '254', autocomplete: 'email', required: true })),
-      el('label', null, 'Current password', el('input', { name: 'current_password', type: 'password', autocomplete: 'current-password', required: true }))
-    ),
-    el('p', { id: 'email-request-message' }),
-    el('button', { type: 'submit', text: 'Send verification code' })
-  );
-
-  const confirm = el('form', { id: 'email-confirm-form', class: 'settings-form', hidden: true },
-    el('h3', { text: 'Confirm new email' }),
-    el('label', null, 'Verification code', el('input', { name: 'code', inputmode: 'numeric', pattern: '[0-9]{6}', maxlength: '6', autocomplete: 'one-time-code', required: true })),
-    el('p', { id: 'email-confirm-message' }),
-    el('button', { type: 'submit', text: 'Confirm email' })
-  );
-
-  dialog.append(profile, password, email, confirm);
+  dialog.append(profile, password);
   document.body.append(dialog);
 
   let selectedPhotoData = null;
@@ -172,29 +154,6 @@ function openSettings() {
       const data = await api('/auth/profile', { method: 'PATCH', body: { current_password: password.elements.current_password.value, password: password.elements.password.value } });
       password.reset(); setMessage('password-message', data.message, true);
     } catch (err) { setMessage('password-message', err.message, false); }
-  });
-
-  let pendingEmail = '';
-  email.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    pendingEmail = email.elements.email.value.trim().toLowerCase();
-    try {
-      const data = await api('/auth/profile/email/request', { method: 'POST', body: { email: pendingEmail, current_password: email.elements.current_password.value } });
-      setMessage('email-request-message', data.message, true);
-      confirm.hidden = false;
-      confirm.elements.code.focus();
-    } catch (err) { setMessage('email-request-message', err.message, false); }
-  });
-
-  confirm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    try {
-      const data = await api('/auth/profile/email/confirm', { method: 'POST', body: { email: pendingEmail, code: confirm.elements.code.value } });
-      document.getElementById('settings-email').value = data.email;
-      const user = getUser(); user.email = data.email; sessionStorage.setItem('user', JSON.stringify(user));
-      setMessage('email-confirm-message', data.message, true);
-      confirm.reset(); email.reset(); confirm.hidden = true;
-    } catch (err) { setMessage('email-confirm-message', err.message, false); }
   });
 
   api('/auth/me').then((profileData) => {

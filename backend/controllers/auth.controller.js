@@ -191,68 +191,6 @@ exports.updateProfile = async (req, res) => {
   } catch (err) { handleError(res, err); }
 };
 
-exports.requestEmailChange = async (req, res) => {
-  try {
-    const email = String(req.body.email || '').trim().toLowerCase();
-    const currentPassword = String(req.body.current_password || '');
-    if (!email || email.length > 254 || /\s/.test(email)) {
-      return res.status(400).json({ error: 'Enter a valid email address without spaces' });
-    }
-    const user = await prisma.users.findUnique({
-      where: { user_id: req.user.user_id },
-      select: { user_id: true, email: true, password_hash: true },
-    });
-    if (!user) return res.status(404).json({ error: 'Account not found' });
-    if (!(await bcrypt.compare(currentPassword, user.password_hash))) {
-      return res.status(401).json({ error: 'Current password is incorrect' });
-    }
-    if (email === user.email) return res.status(400).json({ error: 'Enter a different email address' });
-    if (await prisma.users.findUnique({ where: { email }, select: { user_id: true } })) {
-      return res.status(409).json({ error: 'That email is already registered' });
-    }
-    const code = String(crypto.randomInt(100000, 1000000));
-    const code_hash = crypto.createHash('sha256').update(code).digest('hex');
-    await prisma.password_resets.deleteMany({ where: { user_id: user.user_id } });
-    await prisma.password_resets.create({
-      data: { user_id: user.user_id, code_hash, pending_email: email, expires_at: new Date(Date.now() + 10 * 60 * 1000) },
-    });
-    try {
-      await sendCode(email, code, 'Verify your new BuildStock email', 'email verification code');
-    } catch (err) {
-      await prisma.password_resets.deleteMany({ where: { user_id: user.user_id } });
-      throw err;
-    }
-    res.json({ message: 'Verification code sent.' });
-  } catch (err) { handleError(res, err); }
-};
-
-exports.confirmEmailChange = async (req, res) => {
-  try {
-    const email = String(req.body.email || '').trim().toLowerCase();
-    const code = String(req.body.code || '');
-    if (!email || !/^\d{6}$/.test(code)) {
-      return res.status(400).json({ error: 'Enter the email and its 6-digit verification code' });
-    }
-    const code_hash = crypto.createHash('sha256').update(code).digest('hex');
-    const reset = await prisma.password_resets.findFirst({
-      where: { user_id: req.user.user_id, code_hash, pending_email: email, expires_at: { gt: new Date() } },
-    });
-    if (!reset) return res.status(400).json({ error: 'Invalid or expired verification code' });
-    if (await prisma.users.findUnique({ where: { email }, select: { user_id: true } })) {
-      return res.status(409).json({ error: 'That email is already registered' });
-    }
-    await prisma.$transaction([
-      prisma.users.update({
-        where: { user_id: req.user.user_id },
-        data: { email },
-        select: { user_id: true },
-      }),
-      prisma.password_resets.deleteMany({ where: { user_id: req.user.user_id } }),
-    ]);
-    res.json({ message: 'Email changed and verified.', email });
-  } catch (err) { handleError(res, err); }
-};
-
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
