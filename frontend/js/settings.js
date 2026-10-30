@@ -152,6 +152,7 @@ function openSettings() {
     event.preventDefault();
     try {
       const data = await api('/auth/profile', { method: 'PATCH', body: { current_password: password.elements.current_password.value, password: password.elements.password.value } });
+      if (data.token) sessionStorage.setItem('token', data.token);
       password.reset(); setMessage('password-message', data.message, true);
     } catch (err) { setMessage('password-message', err.message, false); }
   });

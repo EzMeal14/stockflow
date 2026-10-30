@@ -3,6 +3,9 @@ const bcrypt = require('bcryptjs');
 const prisma = require('../lib/prisma');
 
 async function main() {
+  if (process.env.NODE_ENV === 'production' || process.env.ALLOW_DEMO_SEED !== 'true') {
+    throw new Error('Demo seeding is disabled. Set ALLOW_DEMO_SEED=true only in a non-production environment.');
+  }
   const password = process.env.SEED_PASSWORD;
   if (!password || password.length < 8) {
     throw new Error('Set SEED_PASSWORD (8 or more characters) in .env');

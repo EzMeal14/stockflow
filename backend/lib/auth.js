@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const prisma = require('./prisma');
 
 function signToken(user) {
-  return jwt.sign({ sub: user.user_id }, process.env.JWT_SECRET, { expiresIn: '8h' });
+  return jwt.sign({ sub: user.user_id, ver: user.session_version }, process.env.JWT_SECRET, { expiresIn: '8h' });
 }
 
 // Checks the token, then loads the user from the database on every request,
@@ -16,9 +16,16 @@ async function authenticate(req, res, next) {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const user = await prisma.users.findUnique({
       where: { user_id: payload.sub },
-      select: { user_id: true, role: true, warehouse_id: true, is_active: true, is_available: true },
+      select: {
+        user_id: true,
+        role: true,
+        warehouse_id: true,
+        is_active: true,
+        is_available: true,
+        session_version: true,
+      },
     });
-    if (!user || !user.is_active) {
+    if (!user || !user.is_active || payload.ver !== user.session_version) {
       return res.status(401).json({ error: 'Account not found or disabled' });
     }
     req.user = {
