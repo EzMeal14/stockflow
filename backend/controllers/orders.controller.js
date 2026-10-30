@@ -70,6 +70,12 @@ exports.create = async (req, res) => {
         ${delivery_address},
         ${JSON.stringify(items)}::jsonb
       ) AS order_id`;
+    if (req.user.role === 'client') {
+      await prisma.orders.update({
+        where: { order_id: result[0].order_id },
+        data: { payment_status: 'unpaid' },
+      });
+    }
     res.status(201).json({ order_id: result[0].order_id, status: 'pending' });
   } catch (err) {
     handleError(res, err);

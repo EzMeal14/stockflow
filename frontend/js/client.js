@@ -15,6 +15,7 @@ async function startClient() {
   try {
     await Promise.all([loadWarehouses(), loadCatalog(), loadOrders()]);
     await loadAvailability();
+    await handlePaymentReturn();
   } catch (err) {
     setMessage('order-message', err.message, false);
   }
@@ -164,12 +165,68 @@ async function loadOrders() {
   const cols = [
     { key: 'created_at', label: 'Date', format: fmtDate },
     { key: 'status', label: 'Status' },
+    { key: 'payment_status', label: 'Payment' },
     { key: 'delivery_address', label: 'Deliver to' },
     { key: 'order_id', label: 'Order', format: shortId },
   ];
-  fillTable(document.getElementById('orders-table'), cols, rows, (row) => [
-    btn('Details', () => showOrderDetail(row.order_id, document.getElementById('order-detail'), itemMap), 'secondary'),
-  ]);
+  fillTable(document.getElementById('orders-table'), cols, rows, (row) => {
+    const actions = [
+      btn('Details', () => showOrderDetail(row.order_id, document.getElementById('order-detail'), itemMap), 'secondary'),
+    ];
+    if (row.status === 'confirmed' && row.payment_status !== 'paid') {
+      actions.push(btn('Pay / check status', () => startPayMongoCheckout(row.order_id)));
+    }
+    return actions;
+  });
+}
+
+async function startPayMongoCheckout(orderId) {
+  try {
+    const result = await api('/orders/' + encodeURIComponent(orderId) + '/pay', {
+      method: 'POST',
+      body: {},
+    });
+    if (result.payment_status === 'paid') {
+      setMessage('order-message', 'Payment verified. Thank you!', true);
+      await loadOrders();
+      return;
+    }
+    const checkout = new URL(result.checkout_url);
+    if (checkout.protocol !== 'https:' || checkout.hostname !== 'checkout.paymongo.com') {
+      throw new Error('PayMongo returned an unexpected checkout address.');
+    }
+    window.location.assign(checkout.toString());
+  } catch (err) {
+    setMessage('order-message', err.message, false);
+  }
+}
+
+async function handlePaymentReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const result = params.get('payment');
+  const orderId = params.get('order_id');
+  if (!['success', 'cancelled'].includes(result) || !orderId) return;
+  window.history.replaceState({}, '', window.location.pathname);
+  if (result === 'cancelled') {
+    setMessage('order-message', 'Payment was not completed. You can try again from My orders.', false);
+    return;
+  }
+  try {
+    const payment = await api('/orders/' + encodeURIComponent(orderId) + '/payment/verify', {
+      method: 'POST',
+      body: {},
+    });
+    setMessage(
+      'order-message',
+      payment.payment_status === 'paid'
+        ? 'Payment verified. Thank you!'
+        : 'Payment is not confirmed yet. Use Pay / check status in My orders in a moment.',
+      payment.payment_status === 'paid'
+    );
+    await loadOrders();
+  } catch (err) {
+    setMessage('order-message', err.message, false);
+  }
 }
 
 async function placeOrder(e) {
@@ -201,7 +258,7 @@ async function placeOrder(e) {
     inputs.forEach((input) => { if (!input.disabled) input.value = '0'; });
     await loadOrders();
     await loadAvailability();
-    setMessage('order-message', 'Order placed. Status: ' + result.status, true);
+    setMessage('order-message', 'Order placed. PayMongo payment will be available after the warehouse confirms your order.', true);
   } catch (err) {
     // For example "Not enough stock" comes from the database rule
     setMessage('order-message', err.message, false);

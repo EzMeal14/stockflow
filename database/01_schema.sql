@@ -79,6 +79,8 @@ CREATE TABLE orders (
     client_id        uuid         NOT NULL,
     warehouse_id     uuid         NOT NULL,
     status           order_status NOT NULL DEFAULT 'pending',
+    payment_status   varchar(20)  NOT NULL DEFAULT 'not_required',
+    payment_checkout_id varchar(100) UNIQUE,
     delivery_address text         NOT NULL,
     created_at       timestamp    NOT NULL DEFAULT now(),
     CONSTRAINT fk_orders_client

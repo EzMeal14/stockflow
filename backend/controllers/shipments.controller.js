@@ -63,6 +63,9 @@ exports.create = async (req, res) => {
     if (order.status !== 'confirmed') {
       return res.status(400).json({ error: 'Only confirmed orders can be shipped' });
     }
+    if (order.payment_status === 'unpaid') {
+      return res.status(400).json({ error: 'Client payment must be completed before shipping this order' });
+    }
     const driver = await prisma.users.findUnique({
       where: { user_id: driver_id },
       select: { user_id: true, role: true, is_active: true, is_available: true },
