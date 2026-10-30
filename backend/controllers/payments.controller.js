@@ -4,7 +4,6 @@ const {
   request: paymongoRequest,
   paymentMethods,
   checkoutReturnUrl,
-  verifyWebhookSignature,
 } = require('../lib/paymongo');
 
 function unitPriceInCentavos(value) {
@@ -130,45 +129,5 @@ exports.verifyCheckout = async (req, res) => {
     res.json({ payment_status: paid ? 'paid' : order.payment_status });
   } catch (err) {
     handleError(res, err);
-  }
-};
-
-exports.webhook = async (req, res) => {
-  const signature = req.get('X-Paymongo-Signature');
-  if (!verifyWebhookSignature(req.body, signature)) {
-    return res.status(401).json({ error: 'Invalid PayMongo webhook signature' });
-  }
-  let event;
-  try {
-    event = JSON.parse(req.body.toString('utf8'));
-  } catch (err) {
-    return res.status(400).json({ error: 'Invalid webhook payload' });
-  }
-  const data = event && event.data;
-  if (!data || data.type !== 'checkout_session.payment.paid' || data.livemode !== false) {
-    return res.sendStatus(200);
-  }
-  const session = data.data;
-  const attrs = session && session.attributes;
-  const orderId = attrs && attrs.reference_number;
-  if (!session || !session.id || !orderId || !Array.isArray(attrs.payments)
-    || !attrs.payments.some((payment) => payment.attributes && payment.attributes.status === 'paid')) {
-    return res.sendStatus(200);
-  }
-
-  try {
-    await prisma.orders.updateMany({
-      where: {
-        order_id: orderId,
-        payment_checkout_id: session.id,
-        payment_status: 'unpaid',
-        status: 'confirmed',
-      },
-      data: { payment_status: 'paid' },
-    });
-    return res.sendStatus(200);
-  } catch (err) {
-    console.error('Could not apply PayMongo payment webhook:', err);
-    return res.status(500).json({ error: 'Could not process payment event' });
   }
 };

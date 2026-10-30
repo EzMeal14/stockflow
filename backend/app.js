@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const payments = require('./controllers/payments.controller');
 
 const app = express();
 
@@ -16,7 +15,6 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
-app.post('/webhooks/paymongo', express.raw({ type: 'application/json', limit: '1mb' }), payments.webhook);
 app.use(express.json({ limit: '2mb' }));
 
 app.use('/auth', require('./routes/auth.routes'));
