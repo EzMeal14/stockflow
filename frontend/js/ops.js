@@ -128,7 +128,7 @@ async function initOps(ctx) {
       { key: 'movement_type', label: 'Type' },
       { key: 'quantity_change', label: 'Change', format: (v) => (v > 0 ? '+' + v : String(v)) },
       { key: 'item_id', label: 'Item', format: itemName },
-      { key: 'performed_by', label: 'By', format: shortId },
+      { key: 'performed_by_name', label: 'By' },
     ], rows);
   }
 

@@ -88,9 +88,11 @@ exports.movements = async (req, res) => {
     }
     const rows = await prisma.$queryRaw`
       SELECT m.movement_id, m.movement_type, m.quantity_change, m.created_at,
-             m.performed_by, i.warehouse_id, i.item_id
+             m.performed_by, u.firstname || ' ' || u.lastname AS performed_by_name,
+             i.warehouse_id, i.item_id
       FROM stock_movements m
       JOIN inventory i ON i.inventory_id = m.inventory_id
+      JOIN users u ON u.user_id = m.performed_by
       WHERE (${warehouse}::uuid IS NULL OR i.warehouse_id = ${warehouse}::uuid)
       ORDER BY m.created_at DESC
       LIMIT 50`;
