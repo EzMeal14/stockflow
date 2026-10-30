@@ -93,7 +93,7 @@ exports.resetPassword = async (req, res) => {
     await prisma.$transaction([
       prisma.users.update({
         where: { user_id: reset.user_id },
-        data: { password_hash: await bcrypt.hash(password, 10) },
+        data: { password_hash: await bcrypt.hash(password, 10), session_version: { increment: 1 } },
       }),
       prisma.password_resets.deleteMany({ where: { user_id: reset.user_id } }),
     ]);
@@ -167,14 +167,18 @@ exports.updateProfile = async (req, res) => {
     if (firstname !== undefined) data.firstname = firstname;
     if (lastname !== undefined) data.lastname = lastname;
     if (contact_number !== undefined) data.contact_number = contact_number || null;
-    if (changingPassword) data.password_hash = await bcrypt.hash(password, 10);
+    if (changingPassword) {
+      data.password_hash = await bcrypt.hash(password, 10);
+      data.session_version = { increment: 1 };
+    }
     if (hasPhotoChange) data.photo_data = req.body.photo_data;
     if (!Object.keys(data).length) return res.status(400).json({ error: 'Enter a change to save' });
+    let updatedUser;
     try {
-      await prisma.users.update({
+      updatedUser = await prisma.users.update({
         where: { user_id: req.user.user_id },
         data,
-        select: { user_id: true },
+        select: { user_id: true, session_version: true },
       });
     } catch (err) {
       if (hasPhotoChange && missingPhotoColumn(err)) {
@@ -187,7 +191,14 @@ exports.updateProfile = async (req, res) => {
       : changingPassword
         ? 'Password changed successfully.'
         : 'Contact number updated.';
-    res.json({ message });
+    const response = { message };
+    if (changingPassword) {
+      response.token = signToken({
+        user_id: updatedUser.user_id,
+        session_version: updatedUser.session_version,
+      });
+    }
+    res.json(response);
   } catch (err) { handleError(res, err); }
 };
 
@@ -208,6 +219,7 @@ exports.login = async (req, res) => {
         role: true,
         warehouse_id: true,
         is_active: true,
+        session_version: true,
       },
     });
     const ok = user && user.is_active && (await bcrypt.compare(password, user.password_hash));

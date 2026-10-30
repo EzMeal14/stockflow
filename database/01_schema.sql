@@ -35,6 +35,7 @@ CREATE TABLE users (
     photo_data   text,
     is_available  boolean      NOT NULL DEFAULT true,
     is_active     boolean      NOT NULL DEFAULT true,
+    session_version integer    NOT NULL DEFAULT 0,
     created_at    timestamp    NOT NULL DEFAULT now(),
     CONSTRAINT chk_users_contact_number
         CHECK (contact_number IS NULL OR contact_number ~ '^\+?[0-9]{7,15}$'),

@@ -72,6 +72,12 @@ Availability is separate from `is_active`: marking someone not available
 prevents assigning drivers new shipments and lets admins see staff availability
 alongside their assigned warehouse. Drivers marked not available cannot mark
 shipments delivered. Availability keeps the account and history.
+
+For an existing database, also apply
+`backend/prisma/migrations/20261030160000_add_session_version/migration.sql`
+in the Supabase SQL Editor using a database owner account before deploying
+the updated backend. It adds per-user session versioning so password changes
+and resets revoke previously issued login tokens.
 Use **Remove** only when they leave work; it disables their account and keeps
 historical records.
 
@@ -93,10 +99,12 @@ npm install
 DATABASE_URL="postgresql://stockflow_app.PROJECT_ID:PASSWORD@HOST:5432/postgres"
 JWT_SECRET="a long random text"
 SEED_PASSWORD="a demo password of 8 or more characters"
+ALLOW_DEMO_SEED="true"
 ```
 
 - Get `DATABASE_URL` from the DBA, privately. It uses the limited `stockflow_app` role, never an admin account.
 - Make `JWT_SECRET` with: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+- `ALLOW_DEMO_SEED=true` is only for local development. The seed script refuses to run in production; never use demo accounts or shared seed passwords for production users.
 
 3. Generate the Prisma client, make the demo accounts, and start the server:
 
