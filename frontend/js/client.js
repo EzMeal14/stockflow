@@ -5,6 +5,8 @@ let itemMap = {};
 let availability = {}; // item_id -> units available in the chosen warehouse
 let catalogItems = [];
 let catalogCards = new Map();
+let availableGrid;
+let unavailableGrid;
 
 async function startClient() {
   document.getElementById('order-form').addEventListener('submit', placeOrder);
@@ -28,13 +30,16 @@ async function loadCatalog() {
   catalogItems = sortById(await api('/items/catalog'), 'id');
   itemMap = indexBy(catalogItems, 'item_id');
   catalogCards = new Map();
-  const grid = document.getElementById('catalog');
-  grid.replaceChildren();
+  availableGrid = document.getElementById('catalog-available');
+  unavailableGrid = document.getElementById('catalog-unavailable');
   if (!catalogItems.length) {
-    grid.append(el('div', { class: 'item-empty', text: 'No items are currently listed.' }));
+    document.getElementById('available-items-section').hidden = true;
+    document.getElementById('unavailable-items-section').hidden = true;
+    document.getElementById('catalog-empty').hidden = false;
     document.getElementById('catalog-search-status').textContent = '0 items';
     return;
   }
+  document.getElementById('catalog-empty').hidden = true;
   catalogItems.forEach((item) => {
     const input = el('input', { type: 'number', min: '0', step: '1', value: '0' });
     input.dataset.itemId = item.item_id;
@@ -72,26 +77,53 @@ async function loadCatalog() {
     );
     card.dataset.itemId = item.item_id;
     catalogCards.set(item.item_id, card);
-    grid.append(card);
+    availableGrid.append(card);
   });
-  filterCatalog();
+  renderCatalogGroups();
 }
 
 function filterCatalog() {
   const query = document.getElementById('catalog-search').value.trim().toLowerCase();
   const status = document.getElementById('catalog-search-status');
   let matches = 0;
+  let availableMatches = 0;
+  let unavailableMatches = 0;
   catalogItems.forEach((item) => {
     const card = catalogCards.get(item.item_id);
     const match = !query
       || item.name.toLowerCase().includes(query)
       || item.id.toLowerCase().includes(query);
     card.hidden = !match;
-    if (match) matches++;
+    if (match) {
+      matches++;
+      const units = availability[item.item_id] || 0;
+      if (item.is_active && units > 0) availableMatches++;
+      else unavailableMatches++;
+    }
   });
+  document.getElementById('available-items-section').hidden = availableMatches === 0;
+  document.getElementById('unavailable-items-section').hidden = unavailableMatches === 0;
+  document.getElementById('available-items-count').textContent = String(availableMatches);
+  document.getElementById('unavailable-items-count').textContent = String(unavailableMatches);
   status.textContent = query
     ? matches + (matches === 1 ? ' item found' : ' items found') + (matches ? '' : ' - no items match your search.')
     : catalogItems.length + (catalogItems.length === 1 ? ' item' : ' items');
+}
+
+function renderCatalogGroups() {
+  availableGrid.replaceChildren();
+  unavailableGrid.replaceChildren();
+  catalogItems.forEach((item) => {
+    const card = catalogCards.get(item.item_id);
+    const units = availability[item.item_id] || 0;
+    const isAvailable = item.is_active && units > 0;
+    card.classList.toggle('item-card-inactive', !isAvailable);
+    const state = card.querySelector('.item-card-state');
+    state.textContent = !item.is_active ? 'Deactivated' : isAvailable ? 'Available' : 'Out of stock';
+    state.classList.toggle('is-inactive', !isAvailable);
+    (isAvailable ? availableGrid : unavailableGrid).append(card);
+  });
+  filterCatalog();
 }
 
 // How many units of each item are in the chosen warehouse
@@ -119,14 +151,12 @@ function showAvailability() {
     const input = card.querySelector('input');
     const units = availability[input.dataset.itemId] || 0;
     const item = itemMap[input.dataset.itemId];
-    const availabilityText = units > 0 ? String(units) : 'Out of stock';
-    card.querySelector('.available').textContent = item && !item.is_active
-      ? availabilityText + ' (deactivated)'
-      : availabilityText;
+    card.querySelector('.available').textContent = units > 0 ? String(units) : 'Out of stock';
     input.max = String(units);
     input.disabled = units === 0 || !item || !item.is_active;
     if (input.disabled || Number(input.value) > units) input.value = '0';
   });
+  renderCatalogGroups();
 }
 
 async function loadOrders() {

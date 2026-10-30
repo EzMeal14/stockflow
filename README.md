@@ -64,6 +64,17 @@ in the Supabase SQL Editor using a database owner account before uploading
 warehouse, staff, or driver photos. It adds optional photo columns without
 changing existing records. The limited app role cannot apply schema migrations.
 
+For an existing database, also apply
+`backend/prisma/migrations/20261030140000_add_user_availability/migration.sql`
+in the Supabase SQL Editor using a database owner account. It adds
+`users.is_available`, defaulting existing and new accounts to available.
+Availability is separate from `is_active`: marking someone not available
+prevents assigning drivers new shipments and lets admins see staff availability
+alongside their assigned warehouse. Drivers marked not available cannot mark
+shipments delivered. Availability keeps the account and history.
+Use **Remove** only when they leave work; it disables their account and keeps
+historical records.
+
 The data dictionary is in `docs/data_dictionary.md`.
 
 ## Run the Backend
@@ -121,6 +132,7 @@ Send the login token in the header: `Authorization: Bearer YOUR_TOKEN`. Only `/a
 | Area | Routes | Who |
 |---|---|---|
 | Auth | `POST /auth/register`, `POST /auth/login` | Anyone |
+| | `GET /auth/me`, `PATCH /auth/profile` (name, contact, password, profile photo) | Signed-in user |
 | Items | `GET /items`, `GET /items/:id` | admin, staff, client |
 | | `GET /items/catalog` (active and deactivated items for client stock reference) | client |
 | | `GET /items/admin-catalog` (active items with total stock across warehouses) | admin |
@@ -138,7 +150,10 @@ so their related records are preserved.
 | | `POST /orders` | client, admin |
 | | `POST /orders/:id/confirm` | admin, staff |
 | Vehicles | `GET /vehicles` | admin, staff, driver |
-| | `POST /vehicles`, `PUT /vehicles/:id`, `DELETE /vehicles/:id` | admin |
+| | `GET /vehicles/inactive` | admin |
+| | `POST /vehicles`, `POST /vehicles/:id/restore`, `PUT /vehicles/:id`, `DELETE /vehicles/:id` | admin |
+| Staff | `GET /staff`, `POST /staff`, `PATCH /staff/:id/availability`, `DELETE /staff/:id` | admin |
+| Drivers | `GET /drivers`, `POST /drivers`, `PATCH /drivers/:id/availability`, `DELETE /drivers/:id` | admin |
 | Shipments | `GET /shipments`, `GET /shipments/:id` | admin, staff, driver (own) |
 | | `POST /shipments` | admin, staff |
 | | `PATCH /shipments/:id/status` | admin, driver |

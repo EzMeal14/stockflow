@@ -36,7 +36,23 @@
           <input id="catalog-search" class="item-search-input" type="search" placeholder="Search by item name or ID" autocomplete="off">
           <p id="catalog-search-status" class="muted item-search-status" aria-live="polite"></p>
         </div>
-        <div id="catalog" class="item-grid client-item-grid" aria-live="polite"></div>
+        <div id="catalog" class="catalog-groups" aria-live="polite">
+          <section id="available-items-section" class="catalog-group">
+            <div class="catalog-group-heading">
+              <h3>Available in this warehouse</h3>
+              <span id="available-items-count" class="record-count"></span>
+            </div>
+            <div id="catalog-available" class="item-grid client-item-grid"></div>
+          </section>
+          <section id="unavailable-items-section" class="catalog-group">
+            <div class="catalog-group-heading">
+              <h3>Out of stock or deactivated</h3>
+              <span id="unavailable-items-count" class="record-count"></span>
+            </div>
+            <div id="catalog-unavailable" class="item-grid client-item-grid"></div>
+          </section>
+          <div id="catalog-empty" class="item-empty" hidden>No items are currently listed.</div>
+        </div>
         <p class="muted">Available is the stock in the warehouse you chose. Deactivated items are shown for stock reference but cannot be ordered. Stock is taken out when staff confirm your order.</p>
         <p><button type="submit">Place order</button></p>
         <p id="order-message"></p>

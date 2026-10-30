@@ -5,7 +5,7 @@ const { handleError } = require('../lib/errors');
 exports.drivers = async (req, res) => {
   try {
     const rows = await prisma.users.findMany({
-      where: { role: 'driver', is_active: true },
+      where: { role: 'driver', is_active: true, is_available: true },
       select: { user_id: true, firstname: true, lastname: true },
       orderBy: { firstname: 'asc' },
     });

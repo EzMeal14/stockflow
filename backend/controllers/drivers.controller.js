@@ -13,6 +13,7 @@ const PUBLIC_FIELDS = {
   email: true,
   contact_number: true,
   photo_data: true,
+  is_available: true,
 };
 const PUBLIC_FIELDS_WITHOUT_PHOTO = { ...PUBLIC_FIELDS };
 delete PUBLIC_FIELDS_WITHOUT_PHOTO.photo_data;
@@ -95,6 +96,31 @@ exports.create = async (req, res) => {
     if (err.code === 'P2002') {
       return res.status(409).json({ error: 'That email is already used' });
     }
+    handleError(res, err);
+  }
+};
+
+exports.setAvailability = async (req, res) => {
+  try {
+    const { is_available } = req.body;
+    if (typeof is_available !== 'boolean') {
+      return res.status(400).json({ error: 'is_available must be true or false' });
+    }
+    const driver = await prisma.users.findFirst({
+      where: { user_id: req.params.id, role: 'driver', is_active: true },
+      select: { user_id: true },
+    });
+    if (!driver) return res.status(404).json({ error: 'Driver not found' });
+
+    const updated = await withUser(req.user.user_id, (tx) =>
+      tx.users.update({
+        where: { user_id: driver.user_id },
+        data: { is_available },
+        select: { user_id: true, is_available: true },
+      })
+    );
+    res.json(updated);
+  } catch (err) {
     handleError(res, err);
   }
 };

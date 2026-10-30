@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const prisma = require('../lib/prisma');
 const { handleError } = require('../lib/errors');
 const { signToken } = require('../lib/auth');
+const { validPhotoData, missingPhotoColumn } = require('../lib/photo');
 
 // Anyone can register, but only as a client. Staff, drivers and admins are made by an admin.
 exports.register = async (req, res) => {
@@ -104,22 +105,51 @@ exports.resetPassword = async (req, res) => {
 
 exports.me = async (req, res) => {
   try {
+    const select = { firstname: true, lastname: true, email: true, role: true, contact_number: true };
+    if (['admin', 'driver', 'staff', 'client'].includes(req.user.role)) select.photo_data = true;
     const user = await prisma.users.findUnique({
       where: { user_id: req.user.user_id },
-      select: { email: true, role: true, contact_number: true },
+      select,
     });
     if (!user) return res.status(404).json({ error: 'Account not found' });
     res.json(user);
-  } catch (err) { handleError(res, err); }
+  } catch (err) {
+    if (missingPhotoColumn(err)) {
+      console.warn('Database migration for profile photos is not applied; returning profile without photo.');
+      const user = await prisma.users.findUnique({
+        where: { user_id: req.user.user_id },
+        select: { firstname: true, lastname: true, email: true, role: true, contact_number: true },
+      });
+      if (!user) return res.status(404).json({ error: 'Account not found' });
+      return res.json(user);
+    }
+    handleError(res, err);
+  }
 };
 
 exports.updateProfile = async (req, res) => {
   try {
+    const firstname = typeof req.body.firstname === 'string' ? req.body.firstname.trim() : undefined;
+    const lastname = typeof req.body.lastname === 'string' ? req.body.lastname.trim() : undefined;
     const contact_number = typeof req.body.contact_number === 'string' ? req.body.contact_number.trim() : undefined;
+    const hasPhotoChange = Object.prototype.hasOwnProperty.call(req.body, 'photo_data');
+    const hasNameChange = firstname !== undefined || lastname !== undefined;
     const currentPassword = typeof req.body.current_password === 'string' ? req.body.current_password : '';
     const password = typeof req.body.password === 'string' ? req.body.password : '';
+    if (hasPhotoChange && !['admin', 'driver', 'staff', 'client'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'This account cannot update a profile photo' });
+    }
+    if (hasPhotoChange && req.body.photo_data !== null && !validPhotoData(req.body.photo_data)) {
+      return res.status(400).json({ error: 'photo_data must be a JPEG image smaller than 1.5 MB' });
+    }
     if (contact_number !== undefined && contact_number.length > 20) {
       return res.status(400).json({ error: 'Contact number must be 20 characters or fewer' });
+    }
+    if (firstname !== undefined && (!firstname || firstname.length > 200)) {
+      return res.status(400).json({ error: 'First name is required and must be 200 characters or fewer' });
+    }
+    if (lastname !== undefined && (!lastname || lastname.length > 200)) {
+      return res.status(400).json({ error: 'Last name is required and must be 200 characters or fewer' });
     }
     const changingPassword = Boolean(password);
     if (changingPassword && (password.length < 8 || /\s/.test(password) || !currentPassword)) {
@@ -134,15 +164,30 @@ exports.updateProfile = async (req, res) => {
       return res.status(401).json({ error: 'Current password is incorrect' });
     }
     const data = {};
+    if (firstname !== undefined) data.firstname = firstname;
+    if (lastname !== undefined) data.lastname = lastname;
     if (contact_number !== undefined) data.contact_number = contact_number || null;
     if (changingPassword) data.password_hash = await bcrypt.hash(password, 10);
+    if (hasPhotoChange) data.photo_data = req.body.photo_data;
     if (!Object.keys(data).length) return res.status(400).json({ error: 'Enter a change to save' });
-    await prisma.users.update({
-      where: { user_id: req.user.user_id },
-      data,
-      select: { user_id: true },
-    });
-    res.json({ message: changingPassword ? 'Password changed successfully.' : 'Contact number updated.' });
+    try {
+      await prisma.users.update({
+        where: { user_id: req.user.user_id },
+        data,
+        select: { user_id: true },
+      });
+    } catch (err) {
+      if (hasPhotoChange && missingPhotoColumn(err)) {
+        return res.status(503).json({ error: 'Profile photos are unavailable until the database migration is applied.' });
+      }
+      throw err;
+    }
+    const message = hasPhotoChange || hasNameChange
+      ? 'Profile updated.'
+      : changingPassword
+        ? 'Password changed successfully.'
+        : 'Contact number updated.';
+    res.json({ message });
   } catch (err) { handleError(res, err); }
 };
 

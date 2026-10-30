@@ -68,6 +68,7 @@ Every person in the system. The `role` decides which dashboard and data they get
 | warehouse_id | uuid | FK | Yes | | Assigned warehouse (used by staff only) |
 | contact_number | varchar(20) | | Yes | | Phone number of drivers and staff. Digits only, with an optional + at the start (7 to 15 digits) |
 | photo_data | text | | Yes | | Optional compressed JPEG photo |
+| is_available | boolean | | NN | true | Whether staff or drivers are currently available; separate from account status |
 | is_active | boolean | | NN | true | false = account disabled |
 | created_at | timestamp | | NN | now() | When the account was made |
 
