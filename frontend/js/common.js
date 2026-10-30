@@ -204,7 +204,6 @@ async function showOrderDetail(orderId, panel, itemMap) {
     panel.replaceChildren(
       el('h3', { text: 'Order ' + shortId(order.order_id) }),
       el('p', { text: 'Status: ' + order.status + ' | Deliver to: ' + order.delivery_address }),
-      order.payment_status ? el('p', { text: 'Payment: ' + order.payment_status }) : null,
       table
     );
   } catch (err) {

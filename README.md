@@ -79,34 +79,6 @@ in the Supabase SQL Editor using a database owner account before deploying
 the updated backend. It adds per-user session versioning so password changes
 and resets revoke previously issued login tokens.
 
-For PayMongo payments, apply
-`backend/prisma/migrations/20261030210000_add_paymongo_checkout/migration.sql`
-in the Supabase SQL Editor using a database owner account before deploying
-the updated backend. The migration adds payment state and Checkout Session
-tracking to orders.
-
-## PayMongo Test Checkout
-
-The client payment flow uses PayMongo-hosted Checkout Sessions. Staff/admin
-confirm an order first, which checks and deducts stock; the client can then pay
-from **My orders**. Unpaid client orders cannot be shipped. The backend verifies
-payment by checking the Checkout Session directly with PayMongo when the client
-returns to the app or checks payment status. No webhook setup is required.
-
-Configure these variables in the backend environment (never in frontend files):
-
-```
-PAYMONGO_SECRET_KEY="sk_test_..."
-PAYMONGO_PAYMENT_METHOD_TYPES="card,gcash,qrph"
-PAYMONGO_RETURN_URL="https://ezmeal14.github.io/stockflow/frontend/client.html"
-```
-
-Set `PAYMONGO_PAYMENT_METHOD_TYPES` to the method identifiers enabled for the
-PayMongo account. Start with test credentials only; the backend rejects keys
-that do not begin with `sk_test_`. Payment status will not update automatically
-if the client leaves checkout without returning to the app or checking status.
-Never trust a browser redirect as proof of payment; the backend verifies the
-session with PayMongo before marking the order paid.
 Use **Remove** only when they leave work; it disables their account and keeps
 historical records.
 
