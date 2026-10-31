@@ -142,8 +142,8 @@ exports.updateProfile = async (req, res) => {
     if (hasPhotoChange && req.body.photo_data !== null && !validPhotoData(req.body.photo_data)) {
       return res.status(400).json({ error: 'photo_data must be a JPEG image smaller than 1.5 MB' });
     }
-    if (contact_number !== undefined && contact_number.length > 20) {
-      return res.status(400).json({ error: 'Contact number must be 20 characters or fewer' });
+    if (contact_number !== undefined && !/^[0-9]{11}$/.test(contact_number)) {
+      return res.status(400).json({ error: 'Contact number must contain exactly 11 digits with no letters or symbols' });
     }
     if (firstname !== undefined && (!firstname || firstname.length > 200)) {
       return res.status(400).json({ error: 'First name is required and must be 200 characters or fewer' });
