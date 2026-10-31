@@ -1,7 +1,10 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 
 const app = express();
+
+app.use(helmet());
 
 // Only these pages may call the API from a browser.
 // 127.0.0.1 and localhost count as different origins, so both are listed.
