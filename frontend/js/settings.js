@@ -5,6 +5,16 @@ function openSettings() {
   const canEditPhoto = signedInUser && ['admin', 'driver', 'staff', 'client'].includes(signedInUser.role);
   const firstNameInput = el('input', { id: 'settings-firstname', maxlength: '200', autocomplete: 'given-name', required: true });
   const lastNameInput = el('input', { id: 'settings-lastname', maxlength: '200', autocomplete: 'family-name', required: true });
+  const contactInput = el('input', {
+    id: 'settings-contact',
+    type: 'tel',
+    inputmode: 'numeric',
+    maxlength: '11',
+    pattern: '[0-9]{11}',
+    title: 'Enter exactly 11 digits, with no letters or symbols.',
+    autocomplete: 'tel',
+    required: true,
+  });
   const photoInput = el('input', { type: 'file', accept: 'image/jpeg,image/png,image/webp' });
   const photoPreview = el('div', { class: 'settings-photo-preview' });
   const photoHelp = el('p', { class: 'muted settings-photo-help', text: 'Choose a JPG, PNG, or WebP photo (up to 5 MB).' });
@@ -21,7 +31,7 @@ function openSettings() {
       el('label', null, 'First name', firstNameInput),
       el('label', null, 'Last name', lastNameInput),
       el('label', null, 'Email', el('input', { id: 'settings-email', type: 'email', disabled: true })),
-      el('label', null, 'Contact number', el('input', { id: 'settings-contact', type: 'tel', maxlength: '20', autocomplete: 'tel' }))
+      el('label', null, 'Contact number', contactInput)
     ),
     canEditPhoto ? el('div', { class: 'settings-photo-field' },
       el('span', { class: 'field-label', text: 'Profile photo' }),
@@ -46,6 +56,13 @@ function openSettings() {
 
   dialog.append(profile, password);
   document.body.append(dialog);
+
+  contactInput.addEventListener('input', () => {
+    const valid = /^[0-9]{11}$/.test(contactInput.value);
+    const message = 'Enter exactly 11 digits, with no letters or symbols.';
+    contactInput.setCustomValidity(valid ? '' : message);
+    setMessage('profile-message', valid ? '' : message, false);
+  });
 
   let selectedPhotoData = null;
   let removeExistingPhoto = false;
@@ -122,7 +139,7 @@ function openSettings() {
       const body = {
         firstname: firstNameInput.value,
         lastname: lastNameInput.value,
-        contact_number: document.getElementById('settings-contact').value,
+        contact_number: contactInput.value,
       };
       const photoChanged = Boolean(selectedPhotoData) || removeExistingPhoto;
       if (selectedPhotoData) body.photo_data = selectedPhotoData;

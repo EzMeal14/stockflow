@@ -27,7 +27,7 @@ async function loadWarehouses() {
 }
 
 async function loadCatalog() {
-  catalogItems = sortById(await api('/items/catalog'), 'id');
+  catalogItems = sortById((await api('/items/catalog')).filter((item) => item.is_active), 'id');
   itemMap = indexBy(catalogItems, 'item_id');
   catalogCards = new Map();
   availableGrid = document.getElementById('catalog-available');
@@ -50,15 +50,12 @@ async function loadCatalog() {
         el('strong', { text: 'No image' }),
         el('span', { text: 'No image attached' })
       );
-    const card = el('article', { class: 'item-card client-item-card' + (item.is_active ? '' : ' item-card-inactive') },
+    const card = el('article', { class: 'item-card client-item-card' },
       el('div', { class: 'item-card-media' }, media),
       el('div', { class: 'item-card-content' },
         el('div', { class: 'item-card-topline' },
           el('span', { class: 'item-card-id', text: item.id }),
-          el('span', {
-            class: 'item-card-state' + (item.is_active ? '' : ' is-inactive'),
-            text: item.is_active ? 'Active' : 'Deactivated',
-          })
+          el('span', { class: 'item-card-state', text: 'Available' })
         ),
         el('h3', { text: item.name }),
         el('p', { class: 'item-card-description', text: item.description || 'No description provided.' }),
@@ -97,7 +94,7 @@ function filterCatalog() {
     if (match) {
       matches++;
       const units = availability[item.item_id] || 0;
-      if (item.is_active && units > 0) availableMatches++;
+      if (units > 0) availableMatches++;
       else unavailableMatches++;
     }
   });
@@ -116,10 +113,10 @@ function renderCatalogGroups() {
   catalogItems.forEach((item) => {
     const card = catalogCards.get(item.item_id);
     const units = availability[item.item_id] || 0;
-    const isAvailable = item.is_active && units > 0;
+    const isAvailable = units > 0;
     card.classList.toggle('item-card-inactive', !isAvailable);
     const state = card.querySelector('.item-card-state');
-    state.textContent = !item.is_active ? 'Deactivated' : isAvailable ? 'Available' : 'Out of stock';
+    state.textContent = isAvailable ? 'Available' : 'Out of stock';
     state.classList.toggle('is-inactive', !isAvailable);
     (isAvailable ? availableGrid : unavailableGrid).append(card);
   });
@@ -153,7 +150,7 @@ function showAvailability() {
     const item = itemMap[input.dataset.itemId];
     card.querySelector('.available').textContent = units > 0 ? String(units) : 'Out of stock';
     input.max = String(units);
-    input.disabled = units === 0 || !item || !item.is_active;
+    input.disabled = units === 0 || !item;
     if (input.disabled || Number(input.value) > units) input.value = '0';
   });
   renderCatalogGroups();
